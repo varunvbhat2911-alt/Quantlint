@@ -850,7 +850,7 @@ function AuditRunningContent({
               <button
                 type="button"
                 onClick={() => setCancelOpen(true)}
-                className="w-full flex items-center justify-center gap-2 rounded-full border border-border/60 px-4 py-2 text-xs font-medium text-muted-foreground hover:text-foreground hover:border-border transition-all duration-150"
+                className="w-full flex items-center justify-center gap-2 rounded-full border border-border/60 px-4 py-2 text-xs font-medium font-mono text-muted-foreground hover:text-foreground hover:border-border transition-all duration-150"
               >
                 <X className="h-3.5 w-3.5" />
                 Cancel Audit
@@ -865,7 +865,7 @@ function AuditRunningContent({
           <button
             type="button"
             onClick={() => setCancelOpen(true)}
-            className="mt-4 w-full flex items-center justify-center gap-2 rounded-full border border-border/60 px-4 py-2 text-xs font-medium text-muted-foreground hover:text-foreground hover:border-border transition-all duration-150"
+            className="mt-4 w-full flex items-center justify-center gap-2 rounded-full border border-border/60 px-4 py-2 text-xs font-medium font-mono text-muted-foreground hover:text-foreground hover:border-border transition-all duration-150"
           >
             <X className="h-3.5 w-3.5" />
             Cancel Audit

@@ -224,7 +224,7 @@ export function DocumentationLayout({
 
             <Link href="/" className="flex items-center gap-2 group">
               <ShieldCheck className="h-5 w-5 text-foreground" />
-              <span className="text-sm font-semibold tracking-tight">
+              <span className="text-sm font-semibold tracking-tight font-mono">
                 QuantLint
               </span>
               <span className="text-xs text-muted-foreground font-mono">
@@ -238,7 +238,7 @@ export function DocumentationLayout({
             <button
               type="button"
               onClick={() => setIsSearchOpen(true)}
-              className="flex items-center justify-between w-full h-8 px-3 rounded-lg border border-border/60 bg-muted/30 text-xs text-muted-foreground hover:border-border transition-colors"
+              className="flex items-center justify-between w-full h-8 px-3 rounded-lg border border-border/60 bg-muted/30 text-xs text-muted-foreground hover:border-border transition-colors font-mono"
             >
               <div className="flex items-center gap-2">
                 <Search className="h-3.5 w-3.5" />
@@ -264,7 +264,7 @@ export function DocumentationLayout({
               href="https://github.com"
               target="_blank"
               rel="noreferrer"
-              className="hidden sm:flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground px-2.5 py-1.5 rounded-lg hover:bg-secondary/40 transition-colors"
+              className="hidden sm:flex items-center gap-1.5 text-xs font-mono text-muted-foreground hover:text-foreground px-2.5 py-1.5 rounded-lg hover:bg-secondary/40 transition-colors"
             >
               <GithubIcon className="h-3.5 w-3.5" />
               <span>GitHub</span>

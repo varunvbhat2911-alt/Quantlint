@@ -32,7 +32,7 @@ export function SettingsNavigation({
           id="settings-nav-select"
           value={activeId}
           onChange={(event) => onSelect(event.target.value)}
-          className="w-full rounded-lg border border-border/60 bg-background px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="w-full rounded-lg border border-border/60 bg-background px-3 py-2 text-sm font-mono text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           {items.map((item) => (
             <option key={item.id} value={item.id}>
@@ -57,7 +57,7 @@ export function SettingsNavigation({
                   onClick={() => onSelect(item.id)}
                   aria-current={active ? "true" : undefined}
                   className={cn(
-                    "w-full rounded-lg px-3 py-2 text-left text-sm transition-colors",
+                    "w-full rounded-lg px-3 py-2 text-left text-sm font-mono transition-colors",
                     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                     active
                       ? "bg-secondary font-medium text-foreground"

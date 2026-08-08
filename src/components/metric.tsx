@@ -21,7 +21,7 @@ export function MetricLabel({
   return (
     <dt
       data-slot="metric-label"
-      className={cn("text-sm leading-none text-muted-foreground", className)}
+      className={cn("text-xs leading-none font-mono uppercase tracking-wider text-muted-foreground", className)}
       {...props}
     />
   )
@@ -35,7 +35,7 @@ export function MetricValue({
     <dd
       data-slot="metric-value"
       className={cn(
-        "text-lg leading-none font-semibold tabular-nums",
+        "text-lg leading-none font-semibold font-mono tabular-nums",
         className
       )}
       {...props}

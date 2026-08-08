@@ -26,6 +26,7 @@
     "d3-shape": "^3.2.0",
     "date-fns": "^4.4.0",
     "framer-motion": "^13.0.0",
+    "geist": "^1.7.2",
     "jotai": "^2.20.2",
     "lucide-react": "^1.29.0",
     "motion": "^13.0.0",

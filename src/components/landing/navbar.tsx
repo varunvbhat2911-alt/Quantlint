@@ -44,7 +44,7 @@ function HorizontalNavLink({
   return (
     <motion.a
       href={href}
-      className="group relative flex items-center gap-2 py-1 text-xs font-medium"
+      className="group relative flex items-center gap-2 py-1 text-xs font-medium font-mono"
       initial={false}
       whileHover="hover"
     >
@@ -82,7 +82,7 @@ export function Navbar() {
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6 sm:px-8">
         <Link href="/" className="flex items-center gap-2 group shrink-0">
           <ShieldCheck className="h-5 w-5 text-foreground transition-opacity group-hover:opacity-80" />
-          <span className="text-sm font-semibold tracking-tight text-foreground">
+          <span className="text-sm font-semibold tracking-tight text-foreground font-mono">
             QuantLint
           </span>
         </Link>
@@ -99,7 +99,7 @@ export function Navbar() {
             href="https://github.com"
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-2 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
+            className="flex items-center gap-2 text-xs font-medium font-mono text-muted-foreground transition-colors hover:text-foreground"
           >
             <GithubIcon className="h-4 w-4" />
             GitHub

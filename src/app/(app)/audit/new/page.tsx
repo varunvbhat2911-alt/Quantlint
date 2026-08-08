@@ -75,7 +75,7 @@ function InputMethodTabs({
             aria-selected={active}
             onClick={() => onChange(tab.value)}
             className={cn(
-              "flex-1 flex items-center justify-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-all duration-150",
+              "flex-1 flex items-center justify-center gap-2 rounded-md px-4 py-2 text-sm font-medium font-mono transition-all duration-150",
               active
                 ? "bg-background text-foreground shadow-sm"
                 : "text-muted-foreground hover:text-foreground"
@@ -309,7 +309,7 @@ function FrameworkSelector({
         id="framework-select"
         value={value}
         onChange={(e) => onChange(e.target.value as Framework)}
-        className="w-full rounded-lg border border-border/60 bg-background px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        className="w-full rounded-lg border border-border/60 bg-background px-3 py-2 text-sm font-mono text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
         {FRAMEWORK_OPTIONS.map((opt) => (
           <option key={opt.value} value={opt.value}>

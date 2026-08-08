@@ -10,7 +10,7 @@ export function PrimaryButton({
 }: ButtonProps) {
   return (
     <Button
-      className={cn("rounded-full text-sm font-medium", className)}
+      className={cn("rounded-full text-sm font-medium font-mono", className)}
       asChild={asChild}
       {...props}
     />
@@ -26,7 +26,7 @@ export function SecondaryButton({
     <Button
       variant="outline"
       className={cn(
-        "rounded-full text-sm font-medium border-border/80",
+        "rounded-full text-sm font-medium font-mono border-border/80",
         className
       )}
       asChild={asChild}

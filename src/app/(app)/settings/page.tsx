@@ -107,7 +107,7 @@ function ThemeSelector({
               onUpdated();
             }}
             className={cn(
-              "inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition-colors",
+              "inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium font-mono transition-colors",
               "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
               active
                 ? "border-foreground/20 bg-secondary text-foreground"
@@ -399,7 +399,7 @@ export default function SettingsPage() {
                         );
                         showToast("Preference updated.");
                       }}
-                      className="min-w-[140px] rounded-lg border border-border/60 bg-background px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      className="min-w-[140px] rounded-lg border border-border/60 bg-background px-3 py-2 text-sm font-mono text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                     >
                       {ANALYSIS_DEPTH_OPTIONS.map((option) => (
                         <option key={option.value} value={option.value}>
@@ -423,7 +423,7 @@ export default function SettingsPage() {
                         );
                         showToast("Preference updated.");
                       }}
-                      className="min-w-[160px] rounded-lg border border-border/60 bg-background px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      className="min-w-[160px] rounded-lg border border-border/60 bg-background px-3 py-2 text-sm font-mono text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                     >
                       {FRAMEWORK_OPTIONS.map((option) => (
                         <option key={option.value} value={option.value}>

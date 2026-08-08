@@ -19,7 +19,7 @@ export function AppNavbar() {
         <div className="flex items-center gap-6">
           <Link href="/dashboard" className="flex items-center gap-2 group shrink-0">
             <ShieldCheck className="h-5 w-5 text-foreground transition-opacity group-hover:opacity-80" />
-            <span className="text-sm font-semibold tracking-tight text-foreground">
+            <span className="text-sm font-semibold tracking-tight text-foreground font-mono">
               QuantLint
             </span>
           </Link>
@@ -35,7 +35,7 @@ export function AppNavbar() {
                   key={item.href}
                   href={item.href}
                   className={cn(
-                    "rounded-md px-3 py-1.5 text-xs font-medium transition-colors",
+                    "rounded-md px-3 py-1.5 text-xs font-medium font-mono transition-colors",
                     active
                       ? "text-foreground bg-secondary/60"
                       : "text-muted-foreground hover:text-foreground hover:bg-secondary/40"
@@ -78,7 +78,7 @@ export function AppNavbar() {
               key={item.href}
               href={item.href}
               onClick={() => setMobileOpen(false)}
-              className="block rounded-md px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary/40"
+              className="block rounded-md px-3 py-2 text-sm font-medium font-mono text-muted-foreground hover:text-foreground hover:bg-secondary/40"
             >
               {item.label}
             </Link>

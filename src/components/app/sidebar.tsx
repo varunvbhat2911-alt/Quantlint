@@ -27,7 +27,7 @@ export function Sidebar() {
               key={item.href}
               href={item.href}
               className={cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium font-mono transition-colors",
                 active
                   ? "bg-secondary/60 text-foreground"
                   : "text-muted-foreground hover:text-foreground hover:bg-secondary/40"
@@ -137,7 +137,7 @@ export function DocsSidebar({
                         href={href}
                         onClick={onSelect}
                         className={cn(
-                          "flex items-center justify-between rounded-md px-2.5 py-1.5 text-xs transition-colors",
+                          "flex items-center justify-between rounded-md px-2.5 py-1.5 text-xs font-mono transition-colors",
                           isActive
                             ? "bg-secondary text-foreground font-medium"
                             : "text-muted-foreground hover:text-foreground hover:bg-secondary/40"
