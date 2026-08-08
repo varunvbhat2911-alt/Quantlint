@@ -73,6 +73,12 @@ export type TimelineEntry = {
   timestamp: string;
 };
 
+export type RuleCoverageCategory = {
+  label: string;
+  checked: number;
+  passed: number;
+};
+
 export type AuditResultData = {
   auditId: string;
   strategyName: string;
@@ -88,6 +94,7 @@ export type AuditResultData = {
   grade: string;
   gradeStatus: string;
   summary: string;
+  executiveSummary: string;
   rulesChecked: number;
   rulesPassed: number;
   warnings: number;
@@ -97,6 +104,7 @@ export type AuditResultData = {
   aiExplanations: AIExplanation[];
   recommendations: Recommendation[];
   timeline: TimelineEntry[];
+  ruleCoverage: RuleCoverageCategory[];
 };
 
 /* ── Violations ──────────────────────────────────────────── */
@@ -824,6 +832,8 @@ export const MOCK_AUDIT_RESULT: AuditResultData = {
   gradeStatus: "Good — minor issues detected",
   summary:
     "Your strategy passed most validation checks, but several issues require review before production use.",
+  executiveSummary:
+    "QuantLint evaluated the Mean Reversion Strategy against 317 validation rules. The strategy passed 298 checks, with 14 warnings and 5 critical findings requiring attention. The most significant concern is potential look-ahead bias in the signal generation logic. Recommendation: Resolve all critical findings before considering the strategy ready for production research.",
   rulesChecked: 317,
   rulesPassed: 298,
   warnings: 14,
@@ -833,7 +843,35 @@ export const MOCK_AUDIT_RESULT: AuditResultData = {
   aiExplanations: MOCK_AI_EXPLANATIONS,
   recommendations: MOCK_RECOMMENDATIONS,
   timeline: MOCK_TIMELINE,
+  ruleCoverage: [
+    { label: "Bias Detection", checked: 45, passed: 42 },
+    { label: "Risk Management", checked: 40, passed: 38 },
+    { label: "Execution Logic", checked: 55, passed: 51 },
+    { label: "Data Validation", checked: 62, passed: 62 },
+    { label: "Portfolio Logic", checked: 75, passed: 71 },
+    { label: "Metrics Validation", checked: 40, passed: 34 },
+  ],
 };
+
+/* ── Lookup helper for report page ───────────────────────── */
+
+/**
+ * Resolve a report / audit ID to the mock result.
+ * In the future, replace with GET /audit/:id.
+ */
+export function getAuditResultById(
+  id: string
+): AuditResultData | undefined {
+  // Accept either the exact auditId or any ID for demo purposes
+  if (
+    id === MOCK_AUDIT_RESULT.auditId ||
+    id === "QL-AUD-0001" ||
+    id === "rpt_001"
+  ) {
+    return MOCK_AUDIT_RESULT;
+  }
+  return undefined;
+}
 
 /* ── Export JSON helper ──────────────────────────────────── */
 
