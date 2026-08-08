@@ -1,0 +1,1301 @@
+# QuantLint Architecture Decision Records (ADR)
+
+Version: 1.0
+
+Status: Active
+
+Last Updated: August 2026
+
+---
+
+# Purpose
+
+This document records every important architectural and technical decision made during the development of QuantLint.
+
+Its purpose is to prevent future contributors or AI coding assistants from repeatedly questioning decisions that have already been made.
+
+Every decision should contain
+
+- Decision
+- Status
+- Reason
+- Consequences
+
+This document is considered the single source of truth for technical decisions.
+
+---
+
+###########################################################
+
+ADR-001
+
+Project Vision
+
+###########################################################
+
+Status
+
+Accepted
+
+---
+
+Decision
+
+QuantLint will be built as an AI-powered Quality Assurance platform for algorithmic trading strategies.
+
+It will NOT become
+
+- a brokerage
+- a trading platform
+- a live execution engine
+- a signal provider
+
+---
+
+Reason
+
+The long-term goal is to become the "GitHub Actions + SonarQube" for quantitative trading strategies.
+
+The focus is validation, explainability, risk analysis, and research.
+
+---
+
+Consequences
+
+Every future feature should improve strategy validation rather than trade execution.
+
+---
+
+###########################################################
+
+ADR-002
+
+Architecture Style
+
+###########################################################
+
+Status
+
+Accepted
+
+---
+
+Decision
+
+The application will use a Modular Monolith architecture during the MVP.
+
+---
+
+Reason
+
+A Modular Monolith is significantly easier to build and maintain for a small team.
+
+It provides clear separation of concerns while avoiding the complexity of microservices.
+
+---
+
+Consequences
+
+Every module should remain independent.
+
+Future migration to microservices should require minimal changes.
+
+---
+
+###########################################################
+
+ADR-003
+
+Frontend Framework
+
+###########################################################
+
+Status
+
+Accepted
+
+---
+
+Decision
+
+Use Next.js 15 with the App Router.
+
+---
+
+Reason
+
+- Excellent developer experience
+- SEO support
+- Server Components
+- Industry standard
+- Easy deployment on Vercel
+
+---
+
+Consequences
+
+Frontend architecture should follow App Router conventions.
+
+---
+
+###########################################################
+
+ADR-004
+
+Backend Framework
+
+###########################################################
+
+Status
+
+Accepted
+
+---
+
+Decision
+
+Use FastAPI.
+
+---
+
+Reason
+
+- Excellent Python ecosystem
+- Strong typing
+- Automatic OpenAPI generation
+- High performance
+- Ideal for AI and finance workloads
+
+---
+
+Consequences
+
+Business logic should remain framework-independent.
+
+Routes should remain thin.
+
+---
+
+###########################################################
+
+ADR-005
+
+Programming Languages
+
+###########################################################
+
+Status
+
+Accepted
+
+---
+
+Decision
+
+Frontend uses TypeScript.
+
+Backend uses Python.
+
+---
+
+Reason
+
+TypeScript provides type safety for modern frontend development.
+
+Python provides the strongest ecosystem for AI, finance, and quantitative analysis.
+
+---
+
+Consequences
+
+Avoid mixing business logic across languages.
+
+---
+
+###########################################################
+
+ADR-006
+
+Database
+
+###########################################################
+
+Status
+
+Accepted
+
+---
+
+Decision
+
+PostgreSQL is the primary database.
+
+---
+
+Reason
+
+Quantitative research data is highly relational.
+
+PostgreSQL provides reliability, scalability, indexing, and transactional consistency.
+
+---
+
+Consequences
+
+MongoDB will not be used.
+
+Redis will never replace PostgreSQL.
+
+---
+
+###########################################################
+
+ADR-007
+
+Caching
+
+###########################################################
+
+Status
+
+Accepted
+
+---
+
+Decision
+
+Use Redis.
+
+---
+
+Reason
+
+Redis is used for
+
+- queues
+- caching
+- rate limiting
+- temporary storage
+
+---
+
+Consequences
+
+Redis is never the primary data source.
+
+
+###########################################################
+
+ADR-008
+
+AI Gateway Architecture
+
+###########################################################
+
+Status
+
+Accepted
+
+---
+
+Decision
+
+All AI communication must pass through a centralized AI Gateway.
+
+No service or module should communicate directly with an AI provider.
+
+---
+
+Reason
+
+The AI Gateway provides
+
+- Provider abstraction
+- Model routing
+- Retry logic
+- Response validation
+- Prompt versioning
+- Token tracking
+- Cost tracking
+- Failover support
+
+This allows QuantLint to switch providers without modifying business logic.
+
+---
+
+Consequences
+
+Future AI providers can be integrated by extending the gateway instead of changing application code.
+
+---
+
+###########################################################
+
+ADR-009
+
+Provider Agnostic AI
+
+###########################################################
+
+Status
+
+Accepted
+
+---
+
+Decision
+
+QuantLint will never depend on a single AI provider.
+
+Supported providers include
+
+- GLM
+- Claude
+- DeepSeek
+- OpenAI
+- Gemini
+
+---
+
+Reason
+
+AI providers change frequently.
+
+Vendor lock-in increases operational risk.
+
+Provider independence allows
+
+- cost optimization
+- benchmarking
+- fallback support
+- future flexibility
+
+---
+
+Consequences
+
+Business logic should never reference a provider directly.
+
+---
+
+###########################################################
+
+ADR-010
+
+AI Responsibilities
+
+###########################################################
+
+Status
+
+Accepted
+
+---
+
+Decision
+
+AI is responsible only for explanation and recommendations.
+
+AI must never generate deterministic financial values.
+
+---
+
+Reason
+
+Large Language Models are probabilistic systems.
+
+Financial calculations require deterministic algorithms.
+
+---
+
+AI may explain
+
+- Sharpe Ratio
+- Drawdown
+- Risk
+- Rule Violations
+- Backtest Results
+
+AI may NOT calculate
+
+- Sharpe Ratio
+- CAGR
+- Win Rate
+- Profit Factor
+- Drawdown
+- Volatility
+
+---
+
+Consequences
+
+All financial metrics originate from deterministic code.
+
+---
+
+###########################################################
+
+ADR-011
+
+Rule Engine
+
+###########################################################
+
+Status
+
+Accepted
+
+---
+
+Decision
+
+Validation logic will be implemented through an independent Rule Engine.
+
+Every validation check should be represented as an independent rule.
+
+---
+
+Reason
+
+Hardcoding validation logic throughout the application reduces maintainability.
+
+A Rule Engine makes QuantLint extensible.
+
+New validation rules can be added without modifying existing rules.
+
+---
+
+Consequences
+
+Every rule should contain
+
+- Rule ID
+- Category
+- Severity
+- Description
+- Recommendation
+
+---
+
+###########################################################
+
+ADR-012
+
+Static Analysis First
+
+###########################################################
+
+Status
+
+Accepted
+
+---
+
+Decision
+
+Every uploaded strategy must undergo deterministic static analysis before AI analysis.
+
+---
+
+Reason
+
+Static analysis is
+
+- faster
+- cheaper
+- deterministic
+- explainable
+
+AI should enhance deterministic analysis rather than replace it.
+
+---
+
+Consequences
+
+Static Analysis always executes before the AI Gateway.
+
+---
+
+###########################################################
+
+ADR-013
+
+Analysis Pipeline
+
+###########################################################
+
+Status
+
+Accepted
+
+---
+
+Decision
+
+Every strategy follows a fixed analysis pipeline.
+
+Upload
+
+↓
+
+Validation
+
+↓
+
+Static Analysis
+
+↓
+
+Rule Engine
+
+↓
+
+Bias Detection
+
+↓
+
+Risk Engine
+
+↓
+
+Backtesting
+
+↓
+
+AI Explanation
+
+↓
+
+Report Generation
+
+---
+
+Reason
+
+A standardized pipeline guarantees consistent analysis across all strategies.
+
+---
+
+Consequences
+
+No feature should bypass the pipeline.
+
+---
+
+###########################################################
+
+ADR-014
+
+Background Workers
+
+###########################################################
+
+Status
+
+Accepted
+
+---
+
+Decision
+
+Expensive operations must execute asynchronously.
+
+HTTP requests should never perform
+
+- AI Analysis
+- Backtesting
+- Report Generation
+
+---
+
+Reason
+
+Long-running operations reduce responsiveness and scalability.
+
+Background workers improve user experience and reliability.
+
+---
+
+Consequences
+
+API routes remain lightweight.
+
+Workers become independently scalable.
+
+---
+
+###########################################################
+
+ADR-015
+
+Deterministic Before AI
+
+###########################################################
+
+Status
+
+Accepted
+
+---
+
+Decision
+
+Every deterministic calculation must complete before AI is invoked.
+
+---
+
+Reason
+
+AI explanations should always be based on verified numerical results.
+
+This prevents hallucinated metrics and inconsistent reports.
+
+---
+
+Consequences
+
+The AI Gateway receives completed analysis rather than raw strategy code whenever possible.
+
+---
+
+###########################################################
+
+ADR-016
+
+Immutable Reports
+
+###########################################################
+
+Status
+
+Accepted
+
+---
+
+Decision
+
+Generated reports are immutable.
+
+Once generated, reports should never be edited.
+
+A new analysis produces a new report version.
+
+---
+
+Reason
+
+Immutability preserves auditability and research reproducibility.
+
+---
+
+Consequences
+
+Reports become historical records.
+
+Version history remains trustworthy.
+
+---
+
+###########################################################
+
+ADR-017
+
+Strategy Versioning
+
+###########################################################
+
+Status
+
+Accepted
+
+---
+
+Decision
+
+Strategies are version-controlled.
+
+Every significant modification creates a new version.
+
+---
+
+Reason
+
+Users should be able to compare analyses across strategy revisions.
+
+---
+
+Consequences
+
+Analysis results always reference a specific strategy version.
+
+Never overwrite historical strategies.
+
+---
+
+
+###########################################################
+
+ADR-018
+
+Security First Architecture
+
+###########################################################
+
+Status
+
+Accepted
+
+---
+
+Decision
+
+Security takes priority over convenience.
+
+Every feature must be designed assuming user input is untrusted.
+
+---
+
+Reason
+
+QuantLint accepts user-uploaded strategy code.
+
+Uploaded files may contain malicious or poorly written code.
+
+The platform must never execute uploaded code directly.
+
+---
+
+Consequences
+
+Always
+
+- Validate input
+- Sanitize uploads
+- Validate file types
+- Validate request payloads
+
+Never
+
+- Use eval()
+- Use exec()
+- Execute uploaded strategies
+- Expose secrets to clients
+
+---
+
+###########################################################
+
+ADR-019
+
+Authentication Strategy
+
+###########################################################
+
+Status
+
+Accepted
+
+---
+
+Decision
+
+Use Better Auth as the primary authentication solution.
+
+Alternative providers may be supported later.
+
+---
+
+Reason
+
+Authentication should remain independent from business logic.
+
+Changing authentication providers should not require application-wide changes.
+
+---
+
+Consequences
+
+Authentication logic must remain isolated.
+
+Business services should depend only on authenticated user information.
+
+---
+
+###########################################################
+
+ADR-020
+
+Object Storage
+
+###########################################################
+
+Status
+
+Accepted
+
+---
+
+Decision
+
+Store uploaded files in Cloudflare R2.
+
+Store only metadata inside PostgreSQL.
+
+---
+
+Reason
+
+Object storage is designed for binary files.
+
+Databases should only contain structured data.
+
+---
+
+Consequences
+
+Uploaded strategy files
+
+↓
+
+Cloudflare R2
+
+Metadata
+
+↓
+
+PostgreSQL
+
+---
+
+###########################################################
+
+ADR-021
+
+Deployment Strategy
+
+###########################################################
+
+Status
+
+Accepted
+
+---
+
+Decision
+
+Deploy each layer independently.
+
+Frontend
+
+↓
+
+Vercel
+
+Backend
+
+↓
+
+Railway or Render
+
+Database
+
+↓
+
+Supabase PostgreSQL
+
+Redis
+
+↓
+
+Upstash
+
+Storage
+
+↓
+
+Cloudflare R2
+
+---
+
+Reason
+
+Independent deployments improve scalability and simplify maintenance.
+
+---
+
+Consequences
+
+Each service should remain platform-independent.
+
+Avoid provider-specific implementations.
+
+---
+
+###########################################################
+
+ADR-022
+
+Containerization
+
+###########################################################
+
+Status
+
+Accepted
+
+---
+
+Decision
+
+All backend services should be Dockerized.
+
+---
+
+Reason
+
+Containers provide
+
+- consistent environments
+- easier deployment
+- reproducible builds
+
+---
+
+Consequences
+
+Development and production environments should behave consistently.
+
+---
+
+###########################################################
+
+ADR-023
+
+Documentation First Development
+
+###########################################################
+
+Status
+
+Accepted
+
+---
+
+Decision
+
+Documentation should be updated alongside implementation.
+
+Documentation is treated as part of the codebase.
+
+---
+
+Reason
+
+AI coding assistants rely heavily on project documentation.
+
+Keeping documentation current reduces prompt size and prevents inconsistent implementations.
+
+---
+
+Consequences
+
+Whenever architecture changes
+
+↓
+
+Update architecture.md
+
+Whenever design changes
+
+↓
+
+Update design.md
+
+Whenever roadmap changes
+
+↓
+
+Update phases.md
+
+Whenever major decisions are made
+
+↓
+
+Update decisions.md
+
+---
+
+###########################################################
+
+ADR-024
+
+Testing Philosophy
+
+###########################################################
+
+Status
+
+Accepted
+
+---
+
+Decision
+
+Every feature should be validated before being considered complete.
+
+Testing should occur throughout development rather than only before release.
+
+---
+
+Reason
+
+Frequent testing reduces regressions and keeps AI-generated code reliable.
+
+---
+
+Consequences
+
+Each completed task should include
+
+- Functional testing
+- Responsive testing
+- Build verification
+- Lint verification
+
+Future additions
+
+- Unit tests
+- Integration tests
+- End-to-end tests
+
+---
+
+###########################################################
+
+ADR-025
+
+Git Workflow
+
+###########################################################
+
+Status
+
+Accepted
+
+---
+
+Decision
+
+Development follows a small-commit workflow.
+
+Every completed task should result in a Git commit.
+
+---
+
+Reason
+
+Small commits improve traceability and simplify debugging.
+
+They also align well with AI-assisted development.
+
+---
+
+Consequences
+
+Preferred commit types
+
+feat
+
+fix
+
+refactor
+
+docs
+
+style
+
+test
+
+perf
+
+chore
+
+Example
+
+feat: add strategy upload component
+
+---
+
+###########################################################
+
+ADR-026
+
+AI-Assisted Development
+
+###########################################################
+
+Status
+
+Accepted
+
+---
+
+Decision
+
+AI coding assistants are development tools, not decision makers.
+
+Architectural decisions remain human-controlled.
+
+---
+
+Reason
+
+AI accelerates implementation but lacks long-term project context without documentation.
+
+---
+
+Consequences
+
+Before implementing any feature, AI agents should read
+
+- rules.md
+- architecture.md
+- design.md
+- phases.md
+- decisions.md
+- progress.md
+- memory.md
+
+AI should implement only the requested task.
+
+---
+
+###########################################################
+
+ADR-027
+
+Definition of Production Ready
+
+###########################################################
+
+Status
+
+Accepted
+
+---
+
+Decision
+
+A feature is considered production ready only when it satisfies all project standards.
+
+---
+
+Requirements
+
+- Functional
+- Responsive
+- Accessible
+- Typed
+- Documented
+- Tested
+- Secure
+- Build passes
+- Lint passes
+
+---
+
+Consequences
+
+Features that do not meet these requirements should not be merged into the main branch.
+
+---
+
+###########################################################
+
+ADR-028
+
+Future Architecture Evolution
+
+###########################################################
+
+Status
+
+Accepted
+
+---
+
+Decision
+
+The MVP will remain a Modular Monolith.
+
+Microservices will only be introduced when justified by measurable scaling requirements.
+
+---
+
+Reason
+
+Premature microservices increase operational complexity without delivering proportional value during early-stage development.
+
+---
+
+Consequences
+
+The current architecture should prioritize modular boundaries over distributed systems.
+
+When scaling requires separation, modules can evolve into independent services with minimal changes.
+
+---
+
+# Decision Review Process
+
+Every significant architectural or technical decision should be evaluated before implementation.
+
+Questions to consider
+
+- Does this align with the project vision?
+- Does this improve maintainability?
+- Does this simplify AI-assisted development?
+- Does this reduce technical debt?
+- Does this preserve modularity?
+- Does this improve scalability?
+- Does this increase security?
+
+If the answer to most of these questions is "No", reconsider the decision before implementation.
+
+---
+
+# Document Maintenance
+
+This document is a living record.
+
+Whenever a major technical decision is made:
+
+1. Create a new ADR.
+2. Assign the next sequential ADR number.
+3. Record the decision, reason, and consequences.
+4. Do not modify historical ADRs unless correcting factual errors.
+
+Maintaining this history ensures that future contributors and AI coding assistants understand not only **what** decisions were made, but **why** they were made.
+
+ADR-029
+
+Visual Design Philosophy
+
+Decision
+
+QuantLint follows the Quiet Luxury design philosophy.
+
+Reason
+
+Professional financial software should communicate trust instead of excitement.
+
+Consequences
+
+Minimal colors
+
+Minimal gradients
+
+Maximum typography
+
+Maximum whitespace
+

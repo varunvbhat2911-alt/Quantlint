@@ -1,0 +1,696 @@
+# QuantLint Development Memory
+
+Version: 1.0
+
+Status: Active
+
+Last Updated: August 2026
+
+---
+
+# Purpose
+
+This document serves as the long-term memory of the QuantLint project.
+
+Unlike progress.md, which only reflects the current project status, memory.md records the complete development history.
+
+Every significant implementation, architectural decision, challenge, and lesson learned should be recorded here.
+
+This document allows future contributors and AI coding assistants to quickly understand how the project has evolved over time.
+
+Nothing should be deleted from this document.
+
+New sessions should always be appended to the end.
+
+---
+
+# How To Use This Document
+
+Every development session should create one new entry.
+
+Each entry should include
+
+- Date
+- Session Number
+- Goal
+- Completed Work
+- Decisions Made
+- Problems Encountered
+- Solutions Applied
+- Lessons Learned
+- Next Session Goal
+
+Do not rewrite previous entries.
+
+Append only.
+
+---
+
+# Project History
+
+## Session 0
+
+Date
+
+August 2026
+
+---
+
+Goal
+
+Plan the complete QuantLint project before writing any production code.
+
+---
+
+Completed Work
+
+- Finalized the project vision.
+- Defined the target users.
+- Identified the MVP scope.
+- Selected the technology stack.
+- Planned a modular architecture.
+- Decided to use AI-assisted development.
+
+---
+
+Major Decisions
+
+- QuantLint will be a quality assurance platform for algorithmic trading strategies.
+- The application will not execute live trades.
+- Deterministic analysis always comes before AI explanations.
+- AI providers must remain replaceable through an AI Gateway.
+- The project will follow a Modular Monolith architecture.
+- Documentation will be treated as a first-class part of the project.
+
+---
+
+Challenges
+
+No implementation challenges.
+
+Planning session only.
+
+---
+
+Lessons Learned
+
+Investing time in planning reduces implementation mistakes later.
+
+Good documentation will reduce prompt size and improve AI consistency.
+
+---
+
+Next Session
+
+Begin frontend project initialization.
+
+---
+
+## Session 1
+
+Date
+
+August 2026
+
+---
+
+Goal
+
+Initialize Next.js 15 frontend foundation project with TypeScript, Tailwind CSS, shadcn/ui, theme provider, and architecture folder structure.
+
+---
+
+Completed Work
+
+- Initialized Next.js 15 App Router project.
+- Configured TypeScript (`tsconfig.json`) and path alias `@/* -> ./src/*`.
+- Configured Tailwind CSS v4 & custom CSS variables for dark/light themes.
+- Configured shadcn/ui (`components.json`) and `cn()` utility (`src/lib/utils.ts`).
+- Installed core dependencies (`zustand`, `@tanstack/react-query`, `lucide-react`, `next-themes`, `recharts`, `clsx`, `tailwind-merge`, `class-variance-authority`).
+- Installed dev dependencies (`prettier`, `eslint-config-prettier`, `eslint-plugin-prettier`).
+- Created feature-first folder structure per `architecture.md` (`components/ui`, `components/layout`, `components/common`, `components/charts`, `features/auth`, `features/projects`, `features/strategies`, `features/analysis`, `features/reports`, `hooks`, `services`, `store`, `types`, `styles`, `constants`).
+- Configured `Inter` and `JetBrains Mono` fonts via `next/font/google`.
+- Configured Dark/Light/System theme provider (`ThemeProvider` & `ThemeToggle`).
+- Configured ESLint and Prettier (`.prettierrc`, `.prettierignore`).
+- Created clean root layout and minimal placeholder page with theme toggle.
+
+---
+
+Major Decisions
+
+- Set dark mode as the default application theme (`defaultTheme="dark"`).
+- Configured `Inter` as the primary UI font and `JetBrains Mono` as the code font.
+- Used `React.useSyncExternalStore` for the `ThemeToggle` component to guarantee hydration safety without effect state warnings.
+
+---
+
+Challenges
+
+- React 19 / ESLint hook check flagged synchronous `setMounted(true)` inside `useEffect`.
+- Resolved by utilizing `React.useSyncExternalStore` for hydration-safe client mounting check.
+
+---
+
+Lessons Learned
+
+- `useSyncExternalStore` is cleaner and zero-re-render for handling SSR client mounting state than `useEffect` + `useState`.
+
+---
+
+Testing
+
+- `npm run lint`: Passed (0 errors, 0 warnings)
+- `npm run build`: Passed cleanly
+
+---
+
+Next Session
+
+Phase 1, Sprint 2 — Build reusable UI library components (Button, Card, Input, Badge, Modal, Toast, Skeletons, Empty States).
+
+---
+
+# Memory Guidelines
+
+Every future session should follow the same structure.
+
+Avoid recording trivial details.
+
+Examples of information worth recording
+
+- Architectural decisions
+- New modules
+- Bugs that required investigation
+- Performance improvements
+- Refactoring decisions
+- Security improvements
+- AI prompt improvements
+- Major UI redesigns
+
+Avoid recording
+
+- Minor CSS tweaks
+- Typo fixes
+- Small formatting changes
+- Routine dependency updates
+
+---
+
+# Important Project Decisions
+
+These decisions should remain visible throughout the project's lifetime.
+
+- Build for long-term scalability.
+- Keep AI provider agnostic.
+- Never execute uploaded strategy code.
+- Never use AI for deterministic financial calculations.
+- Build documentation alongside code.
+- Keep commits small and focused.
+- Maintain clean architecture at all times.
+- Prioritize maintainability over speed.
+
+---
+
+# Memory Maintenance Rules
+
+At the end of every coding session
+
+1. Append a new session.
+
+2. Never edit historical entries unless correcting factual mistakes.
+
+3. Record major implementation decisions.
+
+4. Record unresolved issues.
+
+5. Record improvements made.
+
+6. Define the objective for the next session.
+
+7. Update progress.md separately.
+
+memory.md is historical.
+
+progress.md is current.
+
+Do not mix their responsibilities.
+
+---
+
+---
+
+# Session Template
+
+Use the following format for every development session.
+
+###########################################################
+
+Session Number
+
+###########################################################
+
+Date
+
+YYYY-MM-DD
+
+---
+
+Duration
+
+Example
+
+2 Hours
+
+---
+
+Objective
+
+Describe the primary goal of the session.
+
+Example
+
+Build the Project Dashboard.
+
+---
+
+Completed Tasks
+
+List every major task completed.
+
+Examples
+
+- Implemented Dashboard Layout.
+- Added Sidebar Navigation.
+- Integrated Theme Provider.
+- Created Project Cards.
+- Added Responsive Navigation.
+
+---
+
+Files Created
+
+List newly created files.
+
+Example
+
+app/dashboard/page.tsx
+
+components/layout/sidebar.tsx
+
+components/dashboard/project-card.tsx
+
+---
+
+Files Modified
+
+List important files that changed.
+
+Avoid listing every file.
+
+Focus only on meaningful modifications.
+
+---
+
+Architecture Changes
+
+Record architecture changes only.
+
+Examples
+
+- Introduced AI Gateway abstraction.
+- Added Rule Engine module.
+- Updated folder structure.
+
+If no architectural changes occurred
+
+Write
+
+None
+
+---
+
+Design Changes
+
+Record UI improvements.
+
+Examples
+
+- Improved spacing.
+- Updated dashboard cards.
+- Redesigned sidebar.
+- Changed navigation flow.
+
+---
+
+Problems Encountered
+
+Describe meaningful challenges.
+
+Examples
+
+- Hydration mismatch.
+- API authentication failed.
+- Tailwind configuration issue.
+- Worker queue failure.
+
+Avoid listing trivial bugs.
+
+---
+
+Solutions Applied
+
+Explain how problems were solved.
+
+Example
+
+Hydration issue resolved by converting component into a Client Component.
+
+---
+
+Important Decisions
+
+Record only decisions that may affect future development.
+
+Examples
+
+- Switched from Clerk to Better Auth.
+- Chose Cloudflare R2 instead of Supabase Storage.
+- Replaced Context API with Zustand.
+
+---
+
+Lessons Learned
+
+Document anything worth remembering.
+
+Examples
+
+- Smaller AI prompts generate cleaner code.
+- shadcn components should not be modified directly.
+- Route Handlers simplify API organization.
+
+---
+
+Performance Notes
+
+Record performance observations.
+
+Examples
+
+- Reduced bundle size.
+- Removed unnecessary re-renders.
+- Improved chart rendering speed.
+
+If none
+
+Write
+
+None
+
+---
+
+Security Notes
+
+Record security improvements.
+
+Examples
+
+- Added upload validation.
+- Sanitized filenames.
+- Protected dashboard routes.
+
+---
+
+Testing
+
+Record testing completed.
+
+Examples
+
+- Desktop
+
+Passed
+
+- Tablet
+
+Passed
+
+- Mobile
+
+Passed
+
+- Build
+
+Passed
+
+- Lint
+
+Passed
+
+---
+
+Documentation Updated
+
+Record updated documents.
+
+Example
+
+Updated
+
+progress.md
+
+memory.md
+
+design.md
+
+---
+
+Git Commit
+
+Record the final commit.
+
+Example
+
+feat: complete dashboard layout
+
+---
+
+Next Session Goal
+
+Clearly define the next objective.
+
+Example
+
+Implement Project CRUD.
+
+---
+
+Open Questions
+
+Record anything requiring future discussion.
+
+Examples
+
+Should reports support sharing?
+
+Should AI provider selection become user configurable?
+
+If none
+
+Write
+
+None
+
+---
+
+###########################################################
+
+Memory Timeline
+
+###########################################################
+
+The memory should remain chronological.
+
+Example
+
+Session 0
+
+↓
+
+Session 1
+
+↓
+
+Session 2
+
+↓
+
+Session 3
+
+↓
+
+...
+
+↓
+
+Session 125
+
+Never insert sessions between existing entries.
+
+Always append new sessions.
+
+---
+
+# Long-Term Project Knowledge
+
+This section stores knowledge that remains relevant throughout development.
+
+Current Architecture
+
+Modular Monolith
+
+Current Frontend
+
+Next.js 15
+
+Current Backend
+
+FastAPI
+
+Primary Database
+
+PostgreSQL
+
+Queue
+
+Redis + Celery
+
+Storage
+
+Cloudflare R2
+
+AI Layer
+
+Provider Agnostic AI Gateway
+
+Design Style
+
+Professional SaaS
+
+Primary Goal
+
+Quality Assurance for Quantitative Trading Strategies
+
+---
+
+# Common Mistakes To Avoid
+
+Never
+
+- Execute uploaded Python code.
+- Store API keys in source code.
+- Skip documentation updates.
+- Mix business logic into UI.
+- Modify unrelated files.
+- Introduce breaking changes without updating documentation.
+- Hardcode environment-specific values.
+
+Always
+
+- Keep prompts focused.
+- Commit after every completed task.
+- Update progress.md.
+- Append memory.md.
+- Follow architecture.md.
+- Follow design.md.
+- Follow rules.md.
+
+---
+
+# AI Context Recovery
+
+If development resumes after a long break,
+
+the AI should perform the following steps.
+
+1.
+
+Read
+
+rules.md
+
+2.
+
+Read
+
+architecture.md
+
+3.
+
+Read
+
+design.md
+
+4.
+
+Read
+
+phases.md
+
+5.
+
+Read
+
+decisions.md
+
+6.
+
+Read
+
+progress.md
+
+7.
+
+Read
+
+memory.md
+
+8.
+
+Summarize the current state before writing code.
+
+No implementation should begin until the project state has been understood.
+
+---
+
+# Memory Review
+
+Every 20–30 development sessions,
+
+review the document and identify recurring patterns.
+
+Examples
+
+- Frequently occurring bugs.
+- Repeated architectural changes.
+- AI prompt improvements.
+- Common implementation mistakes.
+
+Use these insights to improve future development practices.
+
+---
+
+# Final Principle
+
+memory.md is the permanent engineering journal of QuantLint.
+
+It records not only what was built, but why it was built, what was learned, and what should happen next.
+
+It should remain concise, chronological, factual, and useful.
+
+When in doubt,
+
+record decisions and lessons rather than implementation details.
+
+The goal is to ensure that any future developer or AI coding assistant can understand the evolution of QuantLint by reading this document from top to bottom.
+

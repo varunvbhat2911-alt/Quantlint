@@ -1,0 +1,1572 @@
+
+# QuantLint Development Roadmap
+
+Version: 1.0
+
+Status: Active
+
+Last Updated: August 2026
+
+---
+
+# Purpose
+
+This document is the master roadmap for building QuantLint.
+
+The project is divided into small AI-friendly phases.
+
+Each task should:
+
+- be independently buildable
+- be independently testable
+- require minimal prompt context
+- avoid modifying unrelated files
+- produce a working application
+
+Every completed task should be committed before moving to the next one.
+
+---
+
+# Development Rules
+
+Each AI prompt should satisfy the following:
+
+✅ One feature only
+
+✅ Maximum 30–60 minutes of implementation
+
+✅ No unrelated refactoring
+
+✅ No architecture changes
+
+✅ No breaking existing functionality
+
+✅ Update documentation if required
+
+After completing a task:
+
+- Test
+- Fix linting
+- Commit
+- Update progress.md
+- Update memory.md
+
+Only then continue.
+
+---
+
+# Development Workflow
+
+Every feature follows the same lifecycle.
+
+Research
+
+↓
+
+Mini PRD
+
+↓
+
+Implementation
+
+↓
+
+Testing
+
+↓
+
+Refactoring
+
+↓
+
+Documentation
+
+↓
+
+Git Commit
+
+↓
+
+Next Task
+
+Never skip any stage.
+
+---
+
+# Milestone Overview
+
+Phase 1
+
+Foundation
+
+Phase 2
+
+Authentication
+
+Phase 3
+
+Projects
+
+Phase 4
+
+Strategy Workspace
+
+Phase 5
+
+Analysis Engine
+
+Phase 6
+
+Reports
+
+Phase 7
+
+Dashboard
+
+Phase 8
+
+Polish
+
+Phase 9
+
+Beta Launch
+
+Phase 10
+
+Future Features
+
+---
+
+###########################################################
+
+PHASE 1
+
+FOUNDATION
+
+###########################################################
+
+Objective
+
+Build the project foundation.
+
+No business logic.
+
+No backend integration.
+
+Only infrastructure.
+
+Expected Duration
+
+1–2 Days
+
+---
+
+Sprint 1
+
+Project Initialization
+
+Task 1
+
+Initialize Next.js project.
+
+Deliverables
+
+- Next.js 15
+- TypeScript
+- Tailwind CSS
+
+Commit
+
+feat: initialize frontend
+
+---
+
+Task 2
+
+Install shadcn/ui
+
+Deliverables
+
+- shadcn initialized
+- theme provider
+
+Commit
+
+feat: setup shadcn
+
+---
+
+Task 3
+
+Configure project structure.
+
+Create folders
+
+app
+
+components
+
+hooks
+
+services
+
+store
+
+types
+
+lib
+
+features
+
+Commit
+
+chore: project structure
+
+---
+
+Task 4
+
+Configure ESLint
+
+Prettier
+
+TypeScript
+
+Commit
+
+chore: code quality tools
+
+---
+
+Task 5
+
+Configure Dark Mode
+
+Deliverables
+
+- Theme Toggle
+- System Theme
+- Persistence
+
+Commit
+
+feat: dark mode
+
+---
+
+Sprint 2
+
+Design System
+
+Task 6
+
+Build reusable Button component.
+
+Task 7
+
+Build Card component.
+
+Task 8
+
+Build Input component.
+
+Task 9
+
+Build Badge component.
+
+Task 10
+
+Build Modal component.
+
+Task 11
+
+Build Toast component.
+
+Task 12
+
+Build Loading Skeletons.
+
+Task 13
+
+Build Empty States.
+
+Commit
+
+feat: reusable UI library
+
+---
+
+Sprint 3
+
+Layout
+
+Task 14
+
+Navbar
+
+Task 15
+
+Sidebar
+
+Task 16
+
+Dashboard Layout
+
+Task 17
+
+Responsive Layout
+
+Commit
+
+feat: dashboard layout
+
+---
+
+Phase Completion Criteria
+
+Phase 1 is complete when
+
+- Layout finished
+
+- Dark mode works
+
+- Responsive
+
+- UI components reusable
+
+- No backend required
+
+- No lint errors
+
+- Build succeeds
+
+
+###########################################################
+
+PHASE 2
+
+AUTHENTICATION
+
+###########################################################
+
+Objective
+
+Build a complete authentication system.
+
+This phase should provide users with secure authentication and protected routes.
+
+Expected Duration
+
+1–2 Days
+
+Dependencies
+
+Phase 1 Completed
+
+---
+
+Sprint 1
+
+Authentication Pages
+
+Task 18
+
+Build Login Page
+
+Deliverables
+
+- Login UI
+- Responsive Layout
+- Validation
+- Loading State
+
+Commit
+
+feat: login page
+
+---
+
+Task 19
+
+Build Register Page
+
+Deliverables
+
+- Registration Form
+- Validation
+- Success State
+
+Commit
+
+feat: register page
+
+---
+
+Task 20
+
+Forgot Password Page
+
+Deliverables
+
+- Reset Password UI
+
+Commit
+
+feat: forgot password page
+
+---
+
+Sprint 2
+
+Authentication Flow
+
+Task 21
+
+Integrate Better Auth
+
+Deliverables
+
+- Login
+- Logout
+- Register
+
+Commit
+
+feat: authentication
+
+---
+
+Task 22
+
+Protected Routes
+
+Deliverables
+
+- Middleware
+- Route Guards
+
+Commit
+
+feat: protected routes
+
+---
+
+Task 23
+
+User Profile Dropdown
+
+Deliverables
+
+- Avatar
+- Logout
+- Settings
+
+Commit
+
+feat: profile dropdown
+
+---
+
+Phase Completion Criteria
+
+✓ Authentication works
+
+✓ Protected routes work
+
+✓ Responsive
+
+✓ No lint errors
+
+✓ Build passes
+
+###########################################################
+
+PHASE 3
+
+PROJECT MANAGEMENT
+
+###########################################################
+
+Objective
+
+Allow users to organize strategies into projects.
+
+Expected Duration
+
+2 Days
+
+Dependencies
+
+Authentication
+
+---
+
+Sprint 1
+
+Projects
+
+Task 24
+
+Projects Dashboard
+
+Deliverables
+
+- Grid Layout
+- Search
+- Empty State
+
+Commit
+
+feat: projects page
+
+---
+
+Task 25
+
+Create Project Modal
+
+Deliverables
+
+- Form
+- Validation
+
+Commit
+
+feat: create project
+
+---
+
+Task 26
+
+Edit Project
+
+Commit
+
+feat: edit project
+
+---
+
+Task 27
+
+Delete Project
+
+Commit
+
+feat: delete project
+
+---
+
+Task 28
+
+Project Details Page
+
+Deliverables
+
+- Header
+- Description
+- Metadata
+
+Commit
+
+feat: project details
+
+---
+
+Sprint 2
+
+Project Organization
+
+Task 29
+
+Project Search
+
+Task 30
+
+Sorting
+
+Task 31
+
+Filtering
+
+Task 32
+
+Archive Project
+
+Commit
+
+feat: project management
+
+---
+
+Phase Completion Criteria
+
+✓ CRUD Complete
+
+✓ Search
+
+✓ Filter
+
+✓ Responsive
+
+###########################################################
+
+PHASE 4
+
+STRATEGY WORKSPACE
+
+###########################################################
+
+Objective
+
+Create the primary workspace where users upload and manage trading strategies.
+
+Expected Duration
+
+3 Days
+
+Dependencies
+
+Projects
+
+---
+
+Sprint 1
+
+Strategy Management
+
+Task 33
+
+Strategy List
+
+Commit
+
+feat: strategy list
+
+---
+
+Task 34
+
+Upload Strategy
+
+Deliverables
+
+- Drag & Drop
+- File Validation
+- Upload Progress
+
+Commit
+
+feat: upload strategy
+
+---
+
+Task 35
+
+Strategy Details
+
+Deliverables
+
+- Metadata
+- Notes
+- Last Updated
+
+Commit
+
+feat: strategy details
+
+---
+
+Sprint 2
+
+Code Editor
+
+Task 36
+
+Integrate Monaco Editor
+
+Commit
+
+feat: monaco editor
+
+---
+
+Task 37
+
+Syntax Highlighting
+
+Commit
+
+feat: syntax highlighting
+
+---
+
+Task 38
+
+Read Only Mode
+
+Commit
+
+feat: readonly editor
+
+---
+
+Task 39
+
+Copy Code
+
+Commit
+
+feat: copy strategy
+
+---
+
+Task 40
+
+Fullscreen Mode
+
+Commit
+
+feat: fullscreen editor
+
+---
+
+Sprint 3
+
+Versioning
+
+Task 41
+
+Version History Timeline
+
+Commit
+
+feat: version history
+
+---
+
+Task 42
+
+Restore Previous Version
+
+Commit
+
+feat: restore version
+
+---
+
+Task 43
+
+Compare Versions
+
+Future
+
+Skip for MVP
+
+---
+
+Phase Completion Criteria
+
+✓ Upload Works
+
+✓ Monaco Editor
+
+✓ Version History
+
+✓ Responsive
+
+✓ Build Passes
+
+###########################################################
+
+PHASE 5
+
+ANALYSIS ENGINE
+
+###########################################################
+
+Objective
+
+This is the heart of QuantLint.
+
+Users should be able to analyze strategies.
+
+Expected Duration
+
+5–7 Days
+
+Dependencies
+
+Strategy Workspace
+
+---
+
+Sprint 1
+
+Analysis Dashboard
+
+Task 44
+
+Analysis Page Layout
+
+Commit
+
+feat: analysis dashboard
+
+---
+
+Task 45
+
+Pipeline Timeline
+
+Deliverables
+
+Queued
+
+↓
+
+Running
+
+↓
+
+Completed
+
+Commit
+
+feat: analysis progress
+
+---
+
+Task 46
+
+Analysis Status Cards
+
+Commit
+
+feat: analysis status
+
+---
+
+Sprint 2
+
+Results
+
+Task 47
+
+Quality Score Card
+
+Commit
+
+feat: quality score
+
+---
+
+Task 48
+
+Risk Score Card
+
+Commit
+
+feat: risk score
+
+---
+
+Task 49
+
+Deployment Score
+
+Commit
+
+feat: deployment score
+
+---
+
+Task 50
+
+Rule Violations
+
+Commit
+
+feat: rule violations
+
+---
+
+Sprint 3
+
+Recommendations
+
+Task 51
+
+AI Summary
+
+Commit
+
+feat: ai summary
+
+---
+
+Task 52
+
+Recommendations
+
+Commit
+
+feat: recommendations
+
+---
+
+Task 53
+
+Warnings
+
+Commit
+
+feat: warnings
+
+---
+
+Phase Completion Criteria
+
+✓ Analysis UI
+
+✓ Progress Timeline
+
+✓ AI Results
+
+✓ Rule Violations
+
+✓ Dashboard Complete
+
+###########################################################
+
+PHASE 6
+
+REPORTING SYSTEM
+
+###########################################################
+
+Objective
+
+Generate professional reports from completed analyses.
+
+Reports should be downloadable, shareable (future), and easy to understand.
+
+Expected Duration
+
+2–3 Days
+
+Dependencies
+
+Analysis Engine
+
+---
+
+Sprint 1
+
+Report Layout
+
+Task 54
+
+Report Overview Page
+
+Commit
+
+feat: report overview
+
+---
+
+Task 55
+
+Executive Summary Section
+
+Commit
+
+feat: executive summary
+
+---
+
+Task 56
+
+Validation Results Section
+
+Commit
+
+feat: validation results
+
+---
+
+Task 57
+
+Risk Metrics Section
+
+Commit
+
+feat: risk metrics report
+
+---
+
+Sprint 2
+
+Charts
+
+Task 58
+
+Equity Curve Chart
+
+Commit
+
+feat: equity chart
+
+---
+
+Task 59
+
+Drawdown Chart
+
+Commit
+
+feat: drawdown chart
+
+---
+
+Task 60
+
+Performance Metrics Cards
+
+Commit
+
+feat: performance metrics
+
+---
+
+Sprint 3
+
+Export
+
+Task 61
+
+Export PDF
+
+Commit
+
+feat: pdf export
+
+---
+
+Task 62
+
+Export Markdown
+
+Commit
+
+feat: markdown export
+
+---
+
+Phase Completion Criteria
+
+✓ Professional Report
+
+✓ Charts Working
+
+✓ Export Working
+
+✓ Responsive
+
+###########################################################
+
+PHASE 7
+
+DASHBOARD ANALYTICS
+
+###########################################################
+
+Objective
+
+Provide users with an overview of all activity.
+
+Expected Duration
+
+2 Days
+
+Dependencies
+
+Reports
+
+---
+
+Sprint 1
+
+Dashboard Statistics
+
+Task 63
+
+Statistics Cards
+
+Commit
+
+feat: dashboard stats
+
+---
+
+Task 64
+
+Recent Activity Timeline
+
+Commit
+
+feat: activity timeline
+
+---
+
+Task 65
+
+Recent Reports
+
+Commit
+
+feat: recent reports
+
+---
+
+Task 66
+
+Running Analysis Jobs
+
+Commit
+
+feat: running jobs
+
+---
+
+Sprint 2
+
+Dashboard Improvements
+
+Task 67
+
+Search
+
+Commit
+
+feat: dashboard search
+
+---
+
+Task 68
+
+Quick Actions
+
+Commit
+
+feat: dashboard quick actions
+
+---
+
+Task 69
+
+Recent Projects
+
+Commit
+
+feat: recent projects
+
+---
+
+Phase Completion Criteria
+
+✓ Dashboard Complete
+
+✓ Responsive
+
+✓ Search Works
+
+###########################################################
+
+PHASE 8
+
+SETTINGS & POLISH
+
+###########################################################
+
+Objective
+
+Improve user experience and prepare the application for beta release.
+
+Expected Duration
+
+2 Days
+
+Dependencies
+
+Dashboard
+
+---
+
+Sprint 1
+
+Settings
+
+Task 70
+
+Profile Page
+
+Commit
+
+feat: profile page
+
+---
+
+Task 71
+
+Settings Page
+
+Commit
+
+feat: settings
+
+---
+
+Task 72
+
+Notification Preferences
+
+Commit
+
+feat: notifications
+
+---
+
+Sprint 2
+
+UX Improvements
+
+Task 73
+
+Improve Empty States
+
+Commit
+
+feat: empty states
+
+---
+
+Task 74
+
+Improve Loading States
+
+Commit
+
+feat: loading states
+
+---
+
+Task 75
+
+Improve Error Pages
+
+Commit
+
+feat: error pages
+
+---
+
+Task 76
+
+Accessibility Improvements
+
+Commit
+
+feat: accessibility
+
+---
+
+Task 77
+
+Performance Optimization
+
+Commit
+
+perf: optimize frontend
+
+---
+
+Phase Completion Criteria
+
+✓ Smooth UX
+
+✓ Accessible
+
+✓ Fast
+
+✓ Responsive
+
+###########################################################
+
+PHASE 9
+
+BETA RELEASE
+
+###########################################################
+
+Objective
+
+Prepare QuantLint for public beta.
+
+Expected Duration
+
+2 Days
+
+Dependencies
+
+All Previous Phases
+
+---
+
+Checklist
+
+Task 78
+
+Verify Authentication
+
+---
+
+Task 79
+
+Verify Project Workflow
+
+---
+
+Task 80
+
+Verify Strategy Upload
+
+---
+
+Task 81
+
+Verify Analysis Workflow
+
+---
+
+Task 82
+
+Verify Reports
+
+---
+
+Task 83
+
+Verify Responsive Design
+
+---
+
+Task 84
+
+Run Lighthouse Audit
+
+Target
+
+Performance > 90
+
+Accessibility > 90
+
+Best Practices > 90
+
+SEO > 90
+
+---
+
+Task 85
+
+Cross Browser Testing
+
+Chrome
+
+Edge
+
+Firefox
+
+Safari
+
+---
+
+Task 86
+
+Final UI Polish
+
+---
+
+Task 87
+
+Deploy Beta
+
+Frontend
+
+Vercel
+
+Backend
+
+Railway/Render
+
+Database
+
+Supabase
+
+Redis
+
+Upstash
+
+Storage
+
+Cloudflare R2
+
+---
+
+Phase Completion Criteria
+
+✓ Public URL
+
+✓ Stable Build
+
+✓ Production Ready
+
+###########################################################
+
+PHASE 10
+
+POST MVP
+
+###########################################################
+
+The following features are intentionally postponed until after MVP.
+
+Future Features
+
+- GitHub Integration
+- AI Chat Assistant
+- Portfolio Analysis
+- Strategy Comparison
+- Community Strategy Sharing
+- Public Profiles
+- Paper Trading
+- Multi-Asset Support
+- Live Market Data
+- Plugin System
+- Team Collaboration
+- Organizations
+- Role Based Access Control
+- Billing
+- AI Benchmarking
+- Bring Your Own API Key (BYOK)
+- Multi Model Comparison
+- Prompt Playground
+- Enterprise Dashboard
+
+###########################################################
+
+DEFINITION OF DONE
+
+###########################################################
+
+A task is considered complete only if:
+
+✓ Feature works correctly
+
+✓ No TypeScript errors
+
+✓ No Python errors
+
+✓ No lint errors
+
+✓ Build passes
+
+✓ Responsive
+
+✓ Dark Mode compatible
+
+✓ Uses existing design system
+
+✓ Matches architecture.md
+
+✓ Follows rules.md
+
+✓ Documentation updated
+
+✓ Git commit created
+
+###########################################################
+
+AI DEVELOPMENT RULES
+
+###########################################################
+
+Every prompt given to an AI coding assistant must:
+
+- Focus on only one task.
+- Never modify unrelated files.
+- Never refactor unrelated code.
+- Preserve existing functionality.
+- Follow architecture.md.
+- Follow design.md.
+- Follow rules.md.
+- Update progress.md after completion.
+
+If a task is too large,
+
+split it into smaller tasks.
+
+###########################################################
+
+RECOMMENDED DEVELOPMENT ORDER
+
+###########################################################
+
+Phase 1
+
+↓
+
+Phase 2
+
+↓
+
+Phase 3
+
+↓
+
+Phase 4
+
+↓
+
+Phase 5
+
+↓
+
+Phase 6
+
+↓
+
+Phase 7
+
+↓
+
+Phase 8
+
+↓
+
+Phase 9
+
+Never skip phases.
+
+Never implement future features before completing the MVP.
+
+###########################################################
+
+PROJECT GOAL
+
+###########################################################
+
+The objective of QuantLint is not merely to build another AI-powered trading application.
+
+The objective is to build the industry's most trusted platform for validating, explaining, and improving algorithmic trading strategies before they are deployed.
+
+Every feature, design decision, and architectural change should reinforce this vision.

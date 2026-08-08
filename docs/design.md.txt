@@ -1,0 +1,1831 @@
+# QuantLint Design System
+
+Version: 1.0
+
+Status: Active
+
+Last Updated: August 2026
+
+---
+
+# Purpose
+
+This document defines the complete design language of QuantLint.
+
+Every page, component, animation, spacing rule, and interaction should follow this design system.
+
+The goal is to make QuantLint feel like a professional SaaS product rather than a collection of unrelated pages.
+
+Every AI coding assistant must follow this document when building UI.
+
+---
+
+# Design Philosophy
+
+QuantLint is professional software built for developers, traders, and quantitative researchers.
+
+The interface should communicate
+
+- Trust
+- Precision
+- Clarity
+- Simplicity
+- Performance
+
+The UI should never feel playful.
+
+The UI should never feel cluttered.
+
+The UI should prioritize information over decoration.
+
+---
+
+# Design Inspirations
+
+The overall experience should take inspiration from
+
+## Linear
+
+For
+
+- spacing
+- typography
+- navigation
+- minimalism
+
+---
+
+## Vercel Dashboard
+
+For
+
+- dashboard layouts
+- cards
+- settings pages
+- responsiveness
+
+---
+
+## GitHub
+
+For
+
+- project organization
+- tables
+- code presentation
+- repository management
+
+---
+
+## Cursor
+
+For
+
+- editor experience
+- side panels
+- AI interaction
+
+---
+
+## TradingView
+
+For
+
+- charts
+- financial dashboards
+- market visualization
+
+---
+
+# Core Principles
+
+Every screen should follow these principles.
+
+---
+
+## Simplicity
+
+Every element should have a purpose.
+
+Remove unnecessary visual noise.
+
+Prefer whitespace over separators.
+
+---
+
+## Consistency
+
+Buttons should always behave the same.
+
+Cards should always have the same spacing.
+
+Forms should always follow the same layout.
+
+Navigation should remain identical across the application.
+
+---
+
+## Readability
+
+Typography should always be easy to scan.
+
+Avoid long paragraphs.
+
+Use hierarchy.
+
+Headings
+
+↓
+
+Subheadings
+
+↓
+
+Body
+
+↓
+
+Caption
+
+---
+
+## Accessibility
+
+Support keyboard navigation.
+
+Maintain sufficient color contrast.
+
+Use semantic HTML.
+
+Every icon button must have an accessible label.
+
+---
+
+## Responsiveness
+
+Desktop is the primary experience.
+
+Tablet should be fully supported.
+
+Mobile should remain usable.
+
+No horizontal scrolling.
+
+---
+
+# Color System
+
+Primary
+
+Indigo
+
+Used for
+
+- Primary buttons
+- Active navigation
+- Highlights
+- Links
+
+---
+
+Secondary
+
+Blue
+
+Used for
+
+- Charts
+- Secondary actions
+
+---
+
+Success
+
+Green
+
+Used for
+
+- Success messages
+- Completed analyses
+- Passed validation
+
+---
+
+Warning
+
+Amber
+
+Used for
+
+- Medium severity
+- Warnings
+- Pending actions
+
+---
+
+Danger
+
+Red
+
+Used for
+
+- Critical errors
+- Failed rules
+- High risk
+- Dangerous strategies
+
+---
+
+Neutral
+
+Slate
+
+Used for
+
+- Backgrounds
+- Borders
+- Cards
+- Text hierarchy
+
+---
+
+# Theme
+
+Dark Mode
+
+Default
+
+Light Mode
+
+Fully supported
+
+System Mode
+
+Supported
+
+Theme preference should persist between sessions.
+
+---
+
+# Typography
+
+Primary Font
+
+Inter
+
+---
+
+Code Font
+
+JetBrains Mono
+
+---
+
+Heading Rules
+
+H1
+
+Page Titles
+
+H2
+
+Major Sections
+
+H3
+
+Cards
+
+H4
+
+Small Sections
+
+Body
+
+Default Content
+
+Caption
+
+Metadata
+
+---
+
+Text Alignment
+
+Left aligned by default.
+
+Never center large paragraphs.
+
+---
+
+# Icon System
+
+Use
+
+Lucide Icons
+
+Avoid mixing icon libraries.
+
+Icons should always accompany navigation items.
+
+Decorative icons should be minimized.
+
+---
+
+# Border Radius
+
+Small
+
+8px
+
+Medium
+
+12px
+
+Large
+
+16px
+
+Cards should consistently use the same radius.
+
+---
+
+# Shadows
+
+Use subtle shadows only.
+
+Avoid heavy elevation.
+
+Cards should rely more on spacing than shadows.
+
+---
+
+# Borders
+
+Prefer subtle borders.
+
+Avoid thick outlines.
+
+Border color should adapt to the current theme.
+
+---
+
+# Layout Principles
+
+The interface should follow a 12-column responsive grid.
+
+Maximum content width
+
+1440px
+
+Content should never stretch infinitely on ultra-wide monitors.
+
+Use consistent page padding.
+
+---
+
+# Spacing System
+
+Use an 8px spacing scale.
+
+Examples
+
+8
+
+16
+
+24
+
+32
+
+40
+
+48
+
+64
+
+Avoid arbitrary spacing values.
+
+---
+
+# Motion Principles
+
+Animations should communicate state changes.
+
+Never animate purely for decoration.
+
+Animations should be subtle and fast.
+
+Recommended duration
+
+150ms–300ms
+
+---
+
+# Component Philosophy
+
+Every component should be
+
+Reusable
+
+Composable
+
+Accessible
+
+Typed
+
+Responsive
+
+No duplicated components.
+
+
+---
+
+# Component Design System
+
+Every UI component should follow the same visual language.
+
+Components should always be reusable.
+
+Never build page-specific buttons, cards, or forms unless absolutely necessary.
+
+---
+
+# Buttons
+
+Buttons communicate importance through hierarchy.
+
+Only four button variants should exist.
+
+## Primary Button
+
+Purpose
+
+Primary actions.
+
+Examples
+
+- Analyze Strategy
+- Create Project
+- Save Changes
+- Generate Report
+
+Style
+
+- Filled
+- Primary color
+- Medium shadow
+- Rounded corners
+
+Only one primary button should exist in a section.
+
+---
+
+## Secondary Button
+
+Purpose
+
+Alternative actions.
+
+Examples
+
+- Cancel
+- Back
+- Edit
+
+Style
+
+- Outline
+- Neutral colors
+
+---
+
+## Ghost Button
+
+Purpose
+
+Low emphasis actions.
+
+Examples
+
+- Close
+- More
+- Open Menu
+
+No border.
+
+Transparent background.
+
+---
+
+## Destructive Button
+
+Purpose
+
+Dangerous actions.
+
+Examples
+
+- Delete Project
+- Remove Strategy
+- Reset Settings
+
+Always use danger colors.
+
+Never reuse destructive styling for normal actions.
+
+---
+
+# Cards
+
+Cards are the primary container throughout QuantLint.
+
+Every card should include
+
+- Title
+- Optional Description
+- Content
+- Optional Footer
+
+Cards should never look visually heavy.
+
+Use whitespace instead of borders whenever possible.
+
+---
+
+# Dashboard Cards
+
+Dashboard cards display metrics.
+
+Examples
+
+Projects
+
+Strategies
+
+Reports
+
+Analysis Jobs
+
+Each dashboard card contains
+
+- Icon
+- Title
+- Value
+- Trend (optional)
+
+Avoid unnecessary charts inside small cards.
+
+---
+
+# Tables
+
+Tables are used for
+
+Projects
+
+Strategies
+
+Reports
+
+Analysis Jobs
+
+Notifications
+
+Rules
+
+Tables should support
+
+- Sorting
+- Filtering
+- Searching
+- Pagination
+
+Sticky headers should be enabled where appropriate.
+
+---
+
+# Forms
+
+Every form follows the same structure.
+
+Field
+
+↓
+
+Helper Text
+
+↓
+
+Validation Message
+
+↓
+
+Next Field
+
+Avoid placing validation messages inside placeholders.
+
+---
+
+# Input Fields
+
+Use standard input fields for
+
+- Email
+- Password
+- Project Name
+- Strategy Name
+
+All inputs should support
+
+- Focus State
+- Disabled State
+- Error State
+- Success State
+
+---
+
+# Textareas
+
+Used for
+
+- Notes
+- Descriptions
+- AI Feedback
+- Comments
+
+Resizable only when appropriate.
+
+---
+
+# Select Components
+
+Used for
+
+- Filters
+- Categories
+- Assets
+- Timeframes
+
+Searchable selects should be used when options exceed 10 items.
+
+---
+
+# Checkboxes
+
+Used for
+
+- Preferences
+- Settings
+- Multiple Selection
+
+Never use checkboxes where radio buttons are more appropriate.
+
+---
+
+# Radio Buttons
+
+Used only for mutually exclusive options.
+
+Examples
+
+Theme
+
+Light
+
+Dark
+
+System
+
+---
+
+# Switches
+
+Used for application settings.
+
+Examples
+
+Notifications
+
+Auto Refresh
+
+Experimental Features
+
+Never use switches for destructive actions.
+
+---
+
+# Modals
+
+Use modals sparingly.
+
+Suitable examples
+
+Delete confirmation
+
+Create Project
+
+Rename Strategy
+
+Settings
+
+Large workflows should always use dedicated pages.
+
+---
+
+# Dialogs
+
+Dialogs interrupt the user's workflow.
+
+Only use dialogs when confirmation is required.
+
+Examples
+
+Delete
+
+Archive
+
+Reset
+
+Logout
+
+---
+
+# Drawers
+
+Use drawers on smaller screens.
+
+Desktop should prefer side panels.
+
+---
+
+# Toast Notifications
+
+Used for
+
+Success
+
+Warning
+
+Information
+
+Error
+
+Toasts should disappear automatically.
+
+Critical failures should remain visible.
+
+---
+
+# Alerts
+
+Alerts communicate important information.
+
+Types
+
+Success
+
+Warning
+
+Error
+
+Information
+
+Alerts should include
+
+- Icon
+- Title
+- Description
+
+---
+
+# Tooltips
+
+Use tooltips for
+
+- Icon Buttons
+- Financial Metrics
+- Technical Terms
+
+Avoid placing important information exclusively inside tooltips.
+
+---
+
+# Badges
+
+Used for
+
+Status
+
+Severity
+
+Categories
+
+Examples
+
+Completed
+
+Running
+
+Failed
+
+High Risk
+
+Medium Risk
+
+Low Risk
+
+---
+
+# Tabs
+
+Used to organize related information.
+
+Examples
+
+Strategy
+
+Analysis
+
+Backtest
+
+Report
+
+Settings
+
+Never use more than seven tabs.
+
+---
+
+# Accordions
+
+Used for
+
+FAQs
+
+Advanced Settings
+
+Detailed AI Explanations
+
+Avoid nesting accordions.
+
+---
+
+# Search
+
+Every searchable page should include
+
+Search
+
+Filter
+
+Sort
+
+Reset Filters
+
+The search experience should be instant.
+
+---
+
+# Empty States
+
+Every page requires an empty state.
+
+An empty state includes
+
+- Illustration
+- Title
+- Description
+- Primary Action
+
+Example
+
+"No strategies found."
+
+↓
+
+Upload your first strategy.
+
+---
+
+# Loading States
+
+Avoid loading spinners whenever possible.
+
+Prefer skeleton loaders.
+
+Loading should preserve page layout.
+
+---
+
+# Skeletons
+
+Use skeleton loaders for
+
+Cards
+
+Tables
+
+Charts
+
+Reports
+
+Avoid blank white screens.
+
+---
+
+# Error States
+
+Every error page should include
+
+Title
+
+Description
+
+Suggested Action
+
+Retry Button
+
+Support Link (future)
+
+---
+
+# Charts
+
+Charts are one of QuantLint's most important UI elements.
+
+Supported charts
+
+- Equity Curve
+- Drawdown
+- Portfolio Allocation
+- Trade Distribution
+- Monthly Returns
+- Risk Radar
+- Win/Loss Distribution
+
+Charts should remain clean.
+
+Avoid unnecessary gradients.
+
+Avoid 3D charts.
+
+Financial charts should prioritize readability.
+
+---
+
+# Code Editor
+
+The strategy editor is a primary feature.
+
+Requirements
+
+- Syntax Highlighting
+- Line Numbers
+- Dark Theme
+- Read Only Mode
+- Copy Button
+- Full Screen
+- Auto Formatting (future)
+
+Monaco Editor should be used.
+
+---
+
+# Metric Cards
+
+Metrics include
+
+Sharpe Ratio
+
+Sortino Ratio
+
+Win Rate
+
+Max Drawdown
+
+Profit Factor
+
+Each metric card contains
+
+- Metric Name
+- Value
+- Short Description
+- Tooltip
+
+Avoid overwhelming users with formulas.
+
+Explain metrics in plain English.
+
+---
+
+# Rule Violation Cards
+
+Every detected issue should display
+
+Rule Name
+
+Severity
+
+Description
+
+Recommendation
+
+Documentation Link
+
+Users should immediately understand how to fix the issue.
+
+---
+
+# AI Recommendation Cards
+
+Every recommendation should include
+
+Priority
+
+Explanation
+
+Expected Benefit
+
+Suggested Action
+
+Recommendations should be actionable.
+
+Avoid vague suggestions.
+
+---
+
+# Report Layout
+
+Reports should always follow the same order.
+
+1 Executive Summary
+
+2 Strategy Overview
+
+3 Validation Results
+
+4 Rule Violations
+
+5 Risk Metrics
+
+6 Backtesting Results
+
+7 AI Explanation
+
+8 Recommendations
+
+9 Deployment Readiness
+
+Consistency is more important than visual creativity.
+
+---
+
+# Navigation Components
+
+Navigation should remain identical across every page.
+
+Top Navigation
+
+- Search
+- Notifications
+- Theme
+- Profile
+
+Sidebar
+
+- Dashboard
+- Projects
+- Strategies
+- Analysis
+- Reports
+- Settings
+
+Navigation should never change unexpectedly between pages.
+
+---
+
+---
+
+# Page Design Specifications
+
+Every page in QuantLint should follow a predictable structure.
+
+Users should never have to relearn navigation or layouts between pages.
+
+Every page should follow this hierarchy.
+
+```
+Page Title
+
+↓
+
+Page Description
+
+↓
+
+Primary Action
+
+↓
+
+Main Content
+
+↓
+
+Secondary Information
+```
+
+---
+
+# Landing Page
+
+## Purpose
+
+Introduce QuantLint and clearly communicate its value.
+
+The landing page should answer three questions within the first few seconds.
+
+- What is QuantLint?
+- Who is it for?
+- Why should someone use it?
+
+---
+
+## Sections
+
+1. Navigation Bar
+
+2. Hero Section
+
+3. Trusted By (Placeholder)
+
+4. Features
+
+5. Workflow
+
+6. Why QuantLint
+
+7. Screenshots / Product Preview
+
+8. FAQ
+
+9. Call To Action
+
+10. Footer
+
+---
+
+## Hero Section
+
+Must contain
+
+- Product Name
+- Short Description
+- Primary CTA
+- Secondary CTA
+- Product Screenshot
+
+Avoid large paragraphs.
+
+Communicate the value immediately.
+
+---
+
+## Features Section
+
+Each feature should have
+
+- Icon
+- Title
+- Description
+
+Core Features
+
+- Static Analysis
+- Rule Engine
+- AI Review
+- Backtesting
+- Risk Analysis
+- Reports
+
+---
+
+## Workflow Section
+
+Display the complete user journey.
+
+```
+Upload Strategy
+
+↓
+
+Analysis
+
+↓
+
+Review
+
+↓
+
+Improve
+
+↓
+
+Deploy
+```
+
+---
+
+# Authentication Pages
+
+Pages
+
+- Login
+- Register
+- Forgot Password
+
+---
+
+## Layout
+
+Split screen layout.
+
+Left Side
+
+- Branding
+- Product Description
+- Illustration
+
+Right Side
+
+- Authentication Form
+
+---
+
+## Forms
+
+Every form includes
+
+- Validation
+- Loading State
+- Error Messages
+- Success Feedback
+
+---
+
+# Dashboard
+
+The dashboard is the application's home page.
+
+Users should immediately understand
+
+- Current Projects
+- Recent Analyses
+- Running Jobs
+- Reports
+- Notifications
+
+---
+
+## Dashboard Layout
+
+```
+Top Navigation
+
+↓
+
+Statistics Cards
+
+↓
+
+Quick Actions
+
+↓
+
+Recent Activity
+
+↓
+
+Recent Projects
+
+↓
+
+Analysis Jobs
+```
+
+---
+
+## Statistics Cards
+
+Display
+
+- Total Projects
+- Strategies
+- Reports
+- Completed Analyses
+
+Cards should remain visually lightweight.
+
+---
+
+## Quick Actions
+
+Always include
+
+- Create Project
+- Upload Strategy
+- Run Analysis
+
+---
+
+# Projects Page
+
+Purpose
+
+Manage research projects.
+
+---
+
+Each project card displays
+
+- Name
+- Description
+- Strategy Count
+- Last Updated
+- Status
+
+Actions
+
+- Open
+- Edit
+- Delete
+- Archive
+
+---
+
+# Strategy Workspace
+
+This is the most important page.
+
+---
+
+Layout
+
+```
+Project Header
+
+↓
+
+Strategy Information
+
+↓
+
+Code Editor
+
+↓
+
+Version History
+
+↓
+
+Metadata
+
+↓
+
+Analyze Button
+```
+
+---
+
+## Code Editor
+
+Requirements
+
+- Monaco Editor
+- Syntax Highlighting
+- Line Numbers
+- Read Only Mode
+- Copy
+- Full Screen
+
+Future
+
+- Diff View
+- Git History
+
+---
+
+# Analysis Page
+
+Purpose
+
+Display the complete analysis process.
+
+---
+
+## Layout
+
+```
+Strategy
+
+↓
+
+Pipeline Progress
+
+↓
+
+Results
+
+↓
+
+Recommendations
+```
+
+---
+
+## Progress Timeline
+
+Display every completed stage.
+
+Examples
+
+Queued
+
+Running
+
+Static Analysis
+
+Rule Engine
+
+Bias Detection
+
+Backtesting
+
+AI Review
+
+Completed
+
+---
+
+## Analysis Summary
+
+Display
+
+Overall Quality Score
+
+Risk Score
+
+Deployment Readiness
+
+Overall Recommendation
+
+---
+
+# Rule Violations Page
+
+Purpose
+
+Display every detected issue.
+
+Each violation includes
+
+- Rule Name
+- Severity
+- Description
+- Recommendation
+- Documentation Link
+
+Users should immediately know how to fix each issue.
+
+---
+
+# Backtesting Page
+
+Purpose
+
+Visualize historical performance.
+
+---
+
+Charts
+
+- Equity Curve
+- Drawdown
+- Monthly Returns
+- Portfolio Growth
+- Trade Distribution
+
+Metrics
+
+- Sharpe Ratio
+- Sortino Ratio
+- CAGR
+- Win Rate
+- Profit Factor
+
+Users should be able to compare strategy versions.
+
+---
+
+# Reports Page
+
+Purpose
+
+View generated reports.
+
+---
+
+Report Layout
+
+Executive Summary
+
+↓
+
+Validation Results
+
+↓
+
+Rule Violations
+
+↓
+
+Risk Metrics
+
+↓
+
+Charts
+
+↓
+
+AI Explanation
+
+↓
+
+Recommendations
+
+↓
+
+Deployment Readiness
+
+---
+
+Actions
+
+Download PDF
+
+Download Markdown
+
+Share (Future)
+
+---
+
+# Settings
+
+Sections
+
+General
+
+Appearance
+
+Notifications
+
+Security
+
+API Keys (Future)
+
+Danger Zone
+
+Settings should be grouped logically.
+
+---
+
+# Profile
+
+Display
+
+- User Information
+- Account Statistics
+- Recent Activity
+- Connected Providers (Future)
+
+---
+
+# Notifications
+
+Display
+
+- Analysis Completed
+- Report Generated
+- Analysis Failed
+- System Updates
+
+Notifications should be grouped by date.
+
+---
+
+# Search Experience
+
+Global Search should support
+
+Projects
+
+Strategies
+
+Reports
+
+Rules
+
+Navigation
+
+Results should appear instantly.
+
+---
+
+# Responsive Design
+
+Desktop
+
+Primary experience.
+
+---
+
+Tablet
+
+Collapse sidebar.
+
+Maintain dashboard layout.
+
+---
+
+Mobile
+
+Drawer navigation.
+
+Stack cards vertically.
+
+Charts become horizontally scrollable only when necessary.
+
+Never hide important functionality on mobile.
+
+---
+
+# Empty States
+
+Every page must include an informative empty state.
+
+Each empty state contains
+
+- Illustration
+- Title
+- Description
+- Primary Action
+
+Examples
+
+No Projects
+
+↓
+
+Create your first project.
+
+No Reports
+
+↓
+
+Run your first analysis.
+
+---
+
+# Loading Experience
+
+Avoid blank pages.
+
+Always use
+
+- Skeleton Loaders
+- Progressive Loading
+- Optimistic Updates where appropriate
+
+---
+
+# Error Experience
+
+Every error screen should answer
+
+What happened?
+
+Why did it happen?
+
+What can the user do next?
+
+Include
+
+- Error Title
+- Description
+- Retry Action
+
+---
+
+# User Experience Principles
+
+Users should never lose their work.
+
+Long-running tasks should continue in the background.
+
+Always communicate progress.
+
+Avoid unexpected page reloads.
+
+Avoid modal overload.
+
+Prefer dedicated pages for complex workflows.
+
+Every important action should provide immediate feedback.
+
+Every destructive action must require confirmation.
+
+---
+
+# Design Checklist
+
+Every new page added to QuantLint must satisfy the following.
+
+✓ Responsive
+
+✓ Accessible
+
+✓ Dark Mode Compatible
+
+✓ Loading State
+
+✓ Empty State
+
+✓ Error State
+
+✓ Keyboard Navigation
+
+✓ Consistent Layout
+
+✓ Consistent Typography
+
+✓ Consistent Spacing
+
+✓ Uses Existing Components
+
+✓ Matches QuantLint Design Language
+
+---
+
+# Final Design Principle
+
+The interface should make complex quantitative analysis feel approachable.
+
+Users should spend their time understanding strategies, not understanding the interface.
+
+Every screen should reduce cognitive load while increasing confidence in the analysis.
+
+When in doubt,
+
+choose clarity over creativity.
+
+---
+
+# Visual Identity
+
+QuantLint should feel like software used inside a hedge fund.
+
+The interface should resemble
+
+- Linear
+- Apple
+- Stripe Dashboard
+- Arc Browser
+- Mercury
+- Vercel
+
+Avoid startup clichés.
+
+Avoid glowing gradients.
+
+Avoid neon colors.
+
+Avoid excessive borders.
+
+Avoid large colorful cards.
+
+The interface should feel
+
+- Quiet
+- Expensive
+- Premium
+- Minimal
+- Confident
+
+The UI should rely on
+
+- whitespace
+- typography
+- subtle elevation
+- motion
+
+instead of colors.
+

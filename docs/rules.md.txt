@@ -1,0 +1,586 @@
+# rules.md
+
+# QuantLint Development Rules
+
+Version: 1.0
+
+Status: Active
+
+This document defines the permanent engineering rules for QuantLint. Every AI coding agent and contributor must follow these rules before writing or modifying any code.
+
+---
+
+# Project Mission
+
+QuantLint is an AI-powered Quality Assurance platform for algorithmic trading strategies.
+
+The platform helps users validate trading strategies before they are backtested, paper traded, or deployed.
+
+QuantLint is NOT:
+
+- a brokerage
+- an exchange
+- a live trading bot
+- a portfolio manager
+- a signal-selling platform
+
+QuantLint is a research and validation platform.
+
+---
+
+# Core Philosophy
+
+Every feature must answer one of these questions:
+
+- Is the strategy technically correct?
+- Is the strategy statistically valid?
+- Is the strategy financially realistic?
+- Is the strategy safe to deploy?
+- Can the user understand why?
+
+If a feature does not improve one of these goals, it should not be added.
+
+---
+
+# Engineering Principles
+
+## Code Quality
+
+Always write production-quality code.
+
+Code must be:
+
+- readable
+- modular
+- maintainable
+- testable
+- reusable
+- scalable
+
+Never sacrifice maintainability for shorter code.
+
+---
+
+## Clean Architecture
+
+Business logic must never depend on UI.
+
+Business logic must never depend on frameworks.
+
+Every module should have a single responsibility.
+
+Avoid tight coupling.
+
+Favor dependency injection where appropriate.
+
+---
+
+## SOLID Principles
+
+Follow SOLID principles throughout the project.
+
+Prefer composition over inheritance.
+
+Avoid large utility classes.
+
+Avoid god objects.
+
+---
+
+## File Organization
+
+Every file must have one clear purpose.
+
+Avoid dumping unrelated logic into the same file.
+
+Split large components into reusable modules.
+
+---
+
+## Naming
+
+Use descriptive names.
+
+Avoid abbreviations.
+
+Good:
+
+StrategyAnalyzer
+
+AnalysisReport
+
+RiskCalculator
+
+Bad:
+
+SA
+
+DataUtil
+
+Helper
+
+Temp
+
+---
+
+# General Development Rules
+
+Never
+
+- remove unrelated code
+- refactor unrelated modules
+- rename APIs without reason
+- introduce breaking changes
+- duplicate business logic
+- hardcode secrets
+- hardcode API keys
+- hardcode URLs
+- hardcode environment-specific values
+
+Always
+
+- use environment variables
+- write reusable code
+- preserve backward compatibility
+- follow project structure
+- update documentation when architecture changes
+
+---
+
+# Frontend Rules
+
+Framework
+
+Next.js 15 App Router
+
+Language
+
+TypeScript
+
+Styling
+
+Tailwind CSS
+
+Components
+
+shadcn/ui
+
+Icons
+
+Lucide
+
+Charts
+
+TradingView Lightweight Charts
+
+Recharts
+
+Fonts
+
+Inter
+
+JetBrains Mono
+
+---
+
+## Frontend Architecture
+
+Pages should remain lightweight.
+
+Move reusable UI into components.
+
+Move business logic into hooks or services.
+
+Avoid unnecessary prop drilling.
+
+Use Zustand only for UI state.
+
+Use TanStack Query for server state.
+
+---
+
+## UI Philosophy
+
+The interface should feel like professional financial software.
+
+Design inspiration:
+
+- Linear
+- Vercel
+- GitHub
+- Cursor
+- TradingView
+
+Avoid flashy gradients.
+
+Avoid glassmorphism everywhere.
+
+Avoid excessive animations.
+
+Use whitespace generously.
+
+Dark mode is the default.
+
+Light mode must always work correctly.
+
+---
+
+## Responsive Design
+
+Desktop first.
+
+Tablet supported.
+
+Mobile supported.
+
+No horizontal scrolling.
+
+Sidebar collapses automatically.
+
+---
+
+# Backend Rules
+
+Framework
+
+FastAPI
+
+Language
+
+Python
+
+ORM
+
+SQLAlchemy
+
+Database
+
+PostgreSQL
+
+Queue
+
+Celery
+
+Cache
+
+Redis
+
+---
+
+## Backend Philosophy
+
+API endpoints should remain thin.
+
+Business logic belongs in services.
+
+Database access belongs in repositories.
+
+Never place business logic inside routes.
+
+---
+
+## Long Running Tasks
+
+Never execute long-running tasks inside HTTP requests.
+
+Long-running work must be sent to background workers.
+
+Examples:
+
+- AI analysis
+- backtesting
+- report generation
+- PDF creation
+
+---
+
+# AI Rules
+
+The AI is an assistant.
+
+The AI is never the source of truth.
+
+LLMs explain.
+
+Code calculates.
+
+Examples
+
+Correct
+
+Risk Engine
+
+↓
+
+Sharpe Ratio = 1.82
+
+↓
+
+LLM explains what Sharpe Ratio means.
+
+Incorrect
+
+LLM invents Sharpe Ratio.
+
+---
+
+## AI Output
+
+AI responses must always return structured JSON.
+
+Avoid free-form responses whenever possible.
+
+Prompt templates should be reusable.
+
+Never trust raw LLM output without validation.
+
+---
+
+# Security Rules
+
+Never execute uploaded Python code directly.
+
+Never evaluate user code with exec().
+
+Never use eval().
+
+Never expose secrets to the frontend.
+
+Always validate uploaded files.
+
+Always sanitize user input.
+
+Rate-limit expensive endpoints.
+
+Store secrets only in environment variables.
+
+---
+
+# Database Rules
+
+PostgreSQL is the single source of truth.
+
+Every table must have:
+
+- UUID primary key
+- created_at
+- updated_at
+
+Soft delete preferred over permanent deletion where appropriate.
+
+Never perform destructive migrations without review.
+
+---
+
+# API Rules
+
+REST-first architecture.
+
+Consistent response format.
+
+Every endpoint must return meaningful error messages.
+
+Validation must happen before business logic.
+
+Use proper HTTP status codes.
+
+---
+
+# Static Analysis Rules
+
+Static analysis is deterministic.
+
+No AI required.
+
+Rules must be explainable.
+
+Rules should produce:
+
+- severity
+- description
+- recommendation
+
+Never silently ignore errors.
+
+---
+
+# Backtesting Rules
+
+Never manipulate historical data.
+
+Always include:
+
+- commissions
+- slippage
+- realistic execution assumptions
+
+Never use future candles.
+
+Never introduce look-ahead bias.
+
+---
+
+# Risk Rules
+
+Risk calculations must be deterministic.
+
+Metrics must be reproducible.
+
+Never estimate financial metrics using AI.
+
+Use verified mathematical implementations.
+
+---
+
+# Performance Rules
+
+Avoid unnecessary API requests.
+
+Cache expensive queries.
+
+Lazy-load heavy UI.
+
+Avoid unnecessary rerenders.
+
+Optimize large datasets.
+
+---
+
+# Logging Rules
+
+Log:
+
+- errors
+- warnings
+- analysis jobs
+- worker failures
+
+Never log:
+
+- passwords
+- API keys
+- authentication tokens
+
+---
+
+# Git Rules
+
+Every feature should be developed in small commits.
+
+Commit messages should be meaningful.
+
+Example
+
+feat: add project creation modal
+
+fix: resolve sidebar overflow
+
+refactor: extract risk score card
+
+---
+
+# Documentation Rules
+
+Whenever architecture changes:
+
+Update
+
+- architecture.md
+
+Whenever APIs change:
+
+Update
+
+- api.md
+
+Whenever a phase completes:
+
+Update
+
+- phases.md
+
+Whenever a coding session ends:
+
+Update
+
+- memory.md
+
+Whenever a major decision is made:
+
+Update
+
+- decisions.md
+
+Whenever progress changes:
+
+Update
+
+- progress.md
+
+---
+
+# AI Coding Agent Instructions
+
+Before implementing any feature:
+
+1. Read
+
+- rules.md
+- architecture.md
+- phases.md
+- design.md
+- memory.md
+- progress.md
+
+2. Implement only the requested feature.
+
+3. Do not modify unrelated files.
+
+4. Preserve existing functionality.
+
+5. Ensure the project builds successfully.
+
+6. Fix linting errors introduced by your changes.
+
+7. Update documentation if required.
+
+---
+
+# Success Criteria
+
+Every pull request or AI-generated implementation should leave the project:
+
+- more maintainable
+- more modular
+- more documented
+- more secure
+- more scalable
+
+Never trade long-term quality for short-term speed.
+
+QuantLint should be built like a production SaaS product from day one.
+
+UI Rules
+
+Never use neon gradients.
+
+Never use glowing buttons.
+
+Never use purple shadows.
+
+Never use colorful icons.
+
+Never overuse borders.
+
+Prefer whitespace over separators.
+
+One accent color only.
+
+Animations should be subtle.
+
+Cards should have low visual weight.
+
+Premium software should look quiet.
+
+If something attracts attention,
+it must have a reason.

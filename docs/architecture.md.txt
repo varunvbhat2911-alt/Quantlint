@@ -1,0 +1,1849 @@
+# QuantLint System Architecture
+
+**Version:** 1.0
+
+**Status:** Active
+
+**Last Updated:** August 2026
+
+---
+
+# Overview
+
+QuantLint is an AI-powered Quality Assurance platform designed for algorithmic trading strategies.
+
+Its purpose is to help traders, developers, and quantitative researchers verify that a trading strategy is technically correct, statistically valid, financially realistic, and safe before it is backtested, paper traded, or deployed.
+
+QuantLint is **not** a brokerage platform, an exchange, or an automated trading system.
+
+The platform focuses on validation, analysis, explainability, and research.
+
+---
+
+# Vision
+
+QuantLint aims to become the industry's standard quality assurance platform for algorithmic trading strategies.
+
+Instead of helping users generate trading strategies, QuantLint helps users understand whether their strategies are trustworthy.
+
+Every strategy uploaded to QuantLint should answer five fundamental questions:
+
+- Is the code technically correct?
+- Does the strategy contain statistical mistakes?
+- Is the risk acceptable?
+- Is the backtest realistic?
+- Is the strategy ready for deployment?
+
+---
+
+# Architecture Goals
+
+The system has been designed around the following goals.
+
+## Modularity
+
+Every subsystem should have a single responsibility.
+
+No component should depend directly on another component's implementation.
+
+Every major module should be independently replaceable.
+
+---
+
+## Scalability
+
+The architecture should support future growth without requiring major rewrites.
+
+Every expensive subsystem should be capable of independent horizontal scaling.
+
+Examples include:
+
+- AI Processing
+- Backtesting
+- Report Generation
+
+---
+
+## Security
+
+User uploaded code is considered untrusted.
+
+QuantLint never executes uploaded strategy code directly.
+
+All uploaded files must be validated before entering the analysis pipeline.
+
+Secrets, credentials, and API keys are never exposed to the frontend.
+
+---
+
+## Deterministic Analysis
+
+Financial calculations should always come from deterministic algorithms.
+
+Examples include:
+
+- Sharpe Ratio
+- Sortino Ratio
+- Maximum Drawdown
+- Win Rate
+- CAGR
+- Volatility
+- Value at Risk
+
+Large Language Models are never responsible for mathematical calculations.
+
+---
+
+## Explainability
+
+Every analysis result should include a human-readable explanation.
+
+Users should understand:
+
+- why an issue was detected
+- why a strategy received a specific score
+- how the issue can be fixed
+
+Explainability is one of the platform's core principles.
+
+---
+
+## Extensibility
+
+New validation rules, AI providers, reports, and analysis modules should be added without modifying existing business logic.
+
+The architecture should favor extension instead of modification.
+
+---
+
+# Technology Stack
+
+## Frontend
+
+- Next.js 15
+- TypeScript
+- Tailwind CSS
+- shadcn/ui
+- Zustand
+- TanStack Query
+- TradingView Lightweight Charts
+- Recharts
+
+---
+
+## Backend
+
+- FastAPI
+- SQLAlchemy
+- Alembic
+- PostgreSQL
+
+---
+
+## Background Processing
+
+- Celery
+- Redis
+- Upstash Redis
+
+---
+
+## Storage
+
+- Cloudflare R2
+
+---
+
+## Authentication
+
+Preferred
+
+- Better Auth
+
+Alternative
+
+- Clerk
+
+---
+
+## AI Providers
+
+The system is provider agnostic.
+
+Supported providers include:
+
+- GLM 5.2
+- Claude
+- DeepSeek
+- OpenAI
+- Gemini
+
+Future providers can be added through the AI Gateway.
+
+---
+
+# High-Level Architecture
+
+```text
+                    Internet
+                        │
+                        ▼
+                  Cloudflare CDN
+                        │
+                        ▼
+                 Next.js Frontend
+                        │
+               REST API / WebSocket
+                        │
+                        ▼
+                 FastAPI Backend
+                        │
+      ┌─────────────────┼──────────────────┐
+      │                 │                  │
+      ▼                 ▼                  ▼
+ PostgreSQL        Redis Queue       Object Storage
+      │                 │
+      │                 ▼
+      │         Background Workers
+      │                 │
+      └──────────┬──────┘
+                 ▼
+         Analysis Pipeline
+                 │
+                 ▼
+            AI Gateway
+                 │
+      ┌──────────┼──────────┬──────────┐
+      ▼          ▼          ▼          ▼
+   GLM 5.2    Claude    DeepSeek   Future Models
+                 │
+                 ▼
+        Response Validation
+                 │
+                 ▼
+          Report Generation
+                 │
+                 ▼
+           Dashboard UI
+```
+
+---
+
+# Core Architectural Principles
+
+The system follows a modular monolith architecture.
+
+Although deployed as a single backend application during the MVP phase, every subsystem is designed as an independent module.
+
+This allows future migration into microservices without significant architectural changes.
+
+Each module owns its own responsibility.
+
+Modules communicate only through clearly defined interfaces.
+
+Business logic should never leak into presentation layers.
+
+Presentation layers should never contain financial calculations.
+
+Long-running operations should never block API requests.
+
+Every expensive operation should execute asynchronously through background workers.
+
+The architecture is designed to prioritize maintainability over short-term development speed.
+
+---
+
+# Core System Modules
+
+QuantLint is built as a collection of independent modules.
+
+Each module has one responsibility and communicates with other modules through clearly defined interfaces.
+
+This separation ensures the application remains maintainable, scalable, and easy to extend.
+
+---
+
+# Frontend Application
+
+## Purpose
+
+The frontend provides the primary interface through which users interact with QuantLint.
+
+It is responsible only for presentation, user interaction, navigation, and data visualization.
+
+The frontend never performs financial calculations or business logic.
+
+---
+
+## Responsibilities
+
+- Authentication UI
+- Dashboard
+- Project Management
+- Strategy Workspace
+- Analysis Dashboard
+- Report Viewer
+- User Settings
+- Notifications
+- Charts
+- File Uploads
+
+---
+
+## Technology
+
+- Next.js 15
+- TypeScript
+- Tailwind CSS
+- shadcn/ui
+- Zustand
+- TanStack Query
+- TradingView Lightweight Charts
+- Recharts
+
+---
+
+## Design Principles
+
+The frontend should feel like modern professional software.
+
+Design inspiration comes from
+
+- Vercel Dashboard
+- Linear
+- GitHub
+- Cursor
+- TradingView
+
+The interface should be
+
+- minimal
+- responsive
+- accessible
+- dark-first
+- fast
+
+---
+
+# Backend API
+
+## Purpose
+
+The backend serves as the application's orchestration layer.
+
+It coordinates requests, validates input, manages authentication, stores data, creates analysis jobs, and communicates with background workers.
+
+The backend should remain lightweight.
+
+Heavy computations must never execute directly inside API endpoints.
+
+---
+
+## Responsibilities
+
+- Authentication
+- Authorization
+- User Management
+- Project Management
+- Strategy Management
+- Analysis Job Creation
+- Report Retrieval
+- API Validation
+- Database Communication
+
+---
+
+## Technology
+
+- FastAPI
+- SQLAlchemy
+- PostgreSQL
+- Alembic
+
+---
+
+## Design Principles
+
+Business logic belongs inside services.
+
+Database logic belongs inside repositories.
+
+Routes should contain only request handling.
+
+API endpoints should remain thin.
+
+---
+
+# AI Gateway
+
+## Purpose
+
+The AI Gateway is the abstraction layer between QuantLint and all Large Language Models.
+
+No module communicates directly with AI providers.
+
+All AI requests pass through the gateway.
+
+---
+
+## Responsibilities
+
+- Model Routing
+- Prompt Construction
+- Prompt Versioning
+- Response Validation
+- JSON Schema Validation
+- Retry Logic
+- Timeout Handling
+- Cost Tracking
+- Token Tracking
+- AI Logging
+- Provider Failover
+- Response Normalization
+
+---
+
+## Supported Providers
+
+- GLM 5.2
+- Claude
+- DeepSeek
+- OpenAI
+- Gemini
+
+Additional providers should be added without modifying business logic.
+
+---
+
+## AI Design Rules
+
+AI is responsible for
+
+- explanation
+- summarization
+- documentation
+- recommendations
+- code review
+
+AI is NOT responsible for
+
+- financial calculations
+- statistics
+- risk metrics
+- scoring
+- deterministic analysis
+
+Every AI response should be validated before entering the application.
+
+---
+
+# Rule Engine
+
+## Purpose
+
+The Rule Engine is the foundation of QuantLint's validation system.
+
+Instead of hardcoding validation logic across multiple services, every validation is represented as an independent rule.
+
+This makes the platform highly extensible.
+
+---
+
+## Responsibilities
+
+- Register Rules
+- Execute Rules
+- Categorize Violations
+- Calculate Rule Severity
+- Generate Recommendations
+- Aggregate Validation Results
+
+---
+
+## Rule Categories
+
+Examples include
+
+- Code Quality
+- Risk Management
+- Statistical Errors
+- Trading Logic
+- Security
+- Performance
+- Best Practices
+
+---
+
+## Rule Structure
+
+Every rule contains
+
+- Rule ID
+- Name
+- Description
+- Category
+- Severity
+- Recommendation
+- Documentation Reference
+- Enabled Status
+
+Rules should remain independent from one another.
+
+Adding a new rule should never require modifying existing rules.
+
+---
+
+# Static Analysis Engine
+
+## Purpose
+
+The Static Analysis Engine inspects strategy source code without executing it.
+
+It detects structural issues, unsafe practices, and common algorithmic trading mistakes.
+
+---
+
+## Responsibilities
+
+- Parse Python AST
+- Detect Missing Stop Loss
+- Detect Missing Take Profit
+- Detect Missing Position Sizing
+- Detect Dangerous Functions
+- Detect Hardcoded Secrets
+- Detect Missing Transaction Costs
+- Detect Missing Slippage
+- Detect Future Data Usage
+- Detect Look-Ahead Bias
+- Detect Data Leakage
+
+---
+
+## Technology
+
+- Python AST
+- LibCST
+- Custom Validation Rules
+
+No AI is required for static analysis.
+
+---
+
+# Bias Detection Engine
+
+## Purpose
+
+Detect statistical mistakes that commonly invalidate trading strategies.
+
+---
+
+## Responsibilities
+
+- Look-Ahead Bias Detection
+- Survivorship Bias Detection
+- Data Leakage Detection
+- Overfitting Detection
+- Unrealistic Assumption Detection
+
+Each issue should include
+
+- Severity
+- Explanation
+- Recommendation
+
+---
+
+# Risk Engine
+
+## Purpose
+
+Calculate deterministic financial metrics.
+
+The Risk Engine is the single source of truth for all numerical performance metrics.
+
+---
+
+## Responsibilities
+
+Calculate
+
+- Sharpe Ratio
+- Sortino Ratio
+- Maximum Drawdown
+- CAGR
+- Annualized Return
+- Volatility
+- Win Rate
+- Profit Factor
+- Expectancy
+- Alpha
+- Beta
+- Value at Risk
+
+---
+
+## Design Rules
+
+Risk calculations must
+
+- be deterministic
+- be reproducible
+- never rely on AI
+- use verified mathematical implementations
+
+---
+
+# Backtesting Engine
+
+## Purpose
+
+Evaluate trading strategies using historical market data.
+
+The engine simulates trading under realistic market conditions.
+
+---
+
+## Responsibilities
+
+- Historical Data Loading
+- Strategy Simulation
+- Trade Execution Simulation
+- Commission Modeling
+- Slippage Modeling
+- Portfolio Tracking
+- Equity Curve Generation
+- Trade History Generation
+- Performance Metric Calculation
+
+---
+
+## Technology
+
+- Backtesting.py
+- VectorBT
+
+---
+
+## Design Rules
+
+Backtests must
+
+- avoid future data
+- include transaction costs
+- include slippage
+- support multiple asset classes
+- produce reproducible results
+
+---
+
+# Report Generator
+
+## Purpose
+
+Generate professional reports summarizing every completed analysis.
+
+Reports should be suitable for research, collaboration, and documentation.
+
+---
+
+## Responsibilities
+
+Generate
+
+- Executive Summary
+- Strategy Overview
+- Validation Results
+- Risk Metrics
+- Backtest Statistics
+- AI Explanation
+- Recommendations
+- Deployment Readiness Score
+
+---
+
+## Export Formats
+
+- PDF
+- Markdown
+- JSON
+
+Reports should be versioned and stored for future reference.
+
+---
+
+# Notification Service
+
+## Purpose
+
+Keep users informed about long-running tasks.
+
+---
+
+## Responsibilities
+
+Notify users when
+
+- analysis starts
+- analysis completes
+- report generation completes
+- failures occur
+- background jobs finish
+
+The notification system should support future real-time updates using WebSockets.
+
+---
+
+---
+
+# Analysis Pipeline
+
+The Analysis Pipeline is the heart of QuantLint.
+
+Every strategy uploaded by a user passes through a sequence of deterministic validation stages before AI explanations are generated.
+
+The pipeline is designed so that every stage has a single responsibility.
+
+A failure in one stage should not crash the entire pipeline.
+
+Instead, failures should be recorded, reported, and isolated.
+
+---
+
+# Pipeline Overview
+
+```
+Upload Strategy
+        │
+        ▼
+File Validation
+        │
+        ▼
+Project Storage
+        │
+        ▼
+Analysis Job Creation
+        │
+        ▼
+Redis Queue
+        │
+        ▼
+Background Worker
+        │
+        ▼
+Static Analysis
+        │
+        ▼
+Rule Engine
+        │
+        ▼
+Bias Detection
+        │
+        ▼
+Risk Engine
+        │
+        ▼
+Backtesting
+        │
+        ▼
+AI Gateway
+        │
+        ▼
+AI Explanation
+        │
+        ▼
+Report Generator
+        │
+        ▼
+Database Storage
+        │
+        ▼
+Dashboard
+```
+
+---
+
+# Stage 1 — Strategy Upload
+
+The user uploads a Python strategy through the web interface.
+
+Supported upload methods
+
+- Python file (.py)
+- ZIP project (future)
+- GitHub repository (future)
+
+The upload endpoint should never execute uploaded files.
+
+Every upload must first pass file validation.
+
+---
+
+# Stage 2 — File Validation
+
+Purpose
+
+Ensure uploaded files are safe and valid.
+
+Validation includes
+
+- File type validation
+- Maximum size validation
+- Filename sanitization
+- Duplicate detection
+- Encoding validation
+
+If validation fails
+
+↓
+
+Reject upload
+
+↓
+
+Return descriptive error
+
+---
+
+# Stage 3 — Project Storage
+
+After validation
+
+The strategy metadata is stored inside PostgreSQL.
+
+The original source file is stored inside Cloudflare R2.
+
+Database stores
+
+- Project
+- Strategy
+- Version
+- Upload timestamp
+- User ownership
+
+Object storage stores
+
+- Original file
+
+---
+
+# Stage 4 — Analysis Job Creation
+
+The backend immediately creates an analysis job.
+
+The HTTP request ends here.
+
+The frontend receives
+
+- Job ID
+- Current Status
+
+No expensive work happens inside the request.
+
+---
+
+# Stage 5 — Queue Processing
+
+Every analysis request enters Redis.
+
+Redis acts as the message broker.
+
+Background workers pull jobs from the queue.
+
+Benefits
+
+- Non-blocking API
+- Horizontal scaling
+- Retry support
+- Failure recovery
+
+---
+
+# Stage 6 — Background Worker
+
+The worker becomes responsible for the entire analysis.
+
+Responsibilities
+
+- Load strategy
+- Execute pipeline
+- Handle retries
+- Log progress
+- Save results
+
+Workers should be stateless.
+
+Multiple workers should run simultaneously.
+
+---
+
+# Stage 7 — Static Analysis
+
+The uploaded code is parsed without execution.
+
+The analyzer inspects
+
+- Python syntax
+- Imports
+- Trading logic
+- Risk management
+- Dangerous functions
+- Hardcoded secrets
+
+Results are stored immediately.
+
+---
+
+# Stage 8 — Rule Engine
+
+The Rule Engine evaluates all validation rules.
+
+Every rule executes independently.
+
+Example
+
+Rule
+
+↓
+
+Passed
+
+or
+
+↓
+
+Failed
+
+Each failure generates
+
+- Severity
+- Category
+- Recommendation
+- Documentation reference
+
+Rule execution should continue even if another rule fails.
+
+---
+
+# Stage 9 — Bias Detection
+
+Bias Detection searches for statistical mistakes.
+
+Examples
+
+- Look-ahead bias
+- Survivorship bias
+- Data leakage
+- Unrealistic assumptions
+- Curve fitting indicators
+
+Detected issues become part of the analysis report.
+
+---
+
+# Stage 10 — Risk Engine
+
+The Risk Engine calculates deterministic metrics.
+
+Examples
+
+- Sharpe Ratio
+- Sortino Ratio
+- Drawdown
+- CAGR
+- Win Rate
+- Profit Factor
+- Volatility
+
+The Risk Engine never calls AI.
+
+---
+
+# Stage 11 — Backtesting
+
+Historical simulations are executed.
+
+Backtests should include
+
+- Transaction costs
+- Slippage
+- Realistic execution assumptions
+
+Outputs include
+
+- Equity Curve
+- Trades
+- Performance
+- Portfolio History
+
+---
+
+# Stage 12 — AI Gateway
+
+Only after deterministic analysis finishes
+
+↓
+
+The AI Gateway is called.
+
+The gateway receives
+
+- Static Analysis Results
+- Rule Violations
+- Risk Metrics
+- Backtest Results
+
+The gateway decides
+
+- Which model to use
+- Which prompt template to use
+- Whether retries are required
+
+---
+
+# Stage 13 — AI Explanation
+
+The AI converts technical results into understandable language.
+
+The AI never changes deterministic results.
+
+Responsibilities
+
+- Explain metrics
+- Explain warnings
+- Explain strengths
+- Explain weaknesses
+- Suggest improvements
+
+The AI output is validated before storage.
+
+---
+
+# Stage 14 — Report Generation
+
+All analysis results are merged.
+
+Generate
+
+- Executive Summary
+- Charts
+- Validation Results
+- Risk Metrics
+- Recommendations
+- Deployment Readiness
+
+Reports are versioned.
+
+Reports remain immutable after generation.
+
+---
+
+# Stage 15 — Dashboard Update
+
+Once report generation completes
+
+↓
+
+Job status becomes
+
+Completed
+
+↓
+
+Frontend receives update
+
+↓
+
+Dashboard refreshes
+
+↓
+
+User views results
+
+---
+
+# Background Worker Architecture
+
+```
+API Request
+
+↓
+
+Create Analysis Job
+
+↓
+
+Redis Queue
+
+↓
+
+Worker
+
+↓
+
+Pipeline Execution
+
+↓
+
+Save Results
+
+↓
+
+Notify Frontend
+```
+
+Workers should never expose HTTP endpoints.
+
+Workers communicate only with
+
+- PostgreSQL
+- Redis
+- Object Storage
+- AI Gateway
+
+---
+
+# Job Lifecycle
+
+Every analysis job follows the same lifecycle.
+
+```
+Queued
+
+↓
+
+Validating
+
+↓
+
+Running Static Analysis
+
+↓
+
+Running Rule Engine
+
+↓
+
+Running Bias Detection
+
+↓
+
+Running Risk Analysis
+
+↓
+
+Running Backtest
+
+↓
+
+Generating AI Explanation
+
+↓
+
+Generating Report
+
+↓
+
+Completed
+```
+
+Possible failure states
+
+- Validation Failed
+- Worker Failed
+- AI Failed
+- Report Failed
+- Cancelled
+
+Every failure must include
+
+- Timestamp
+- Error Message
+- Retry Count
+
+---
+
+# Retry Strategy
+
+Recoverable failures
+
+- AI timeout
+- Network issues
+- Temporary provider outage
+
+These should retry automatically.
+
+Non-recoverable failures
+
+- Invalid strategy
+- Corrupted file
+- Unsupported format
+
+These should fail immediately.
+
+Maximum retries should be configurable.
+
+---
+
+# Data Flow
+
+```
+User
+
+↓
+
+Frontend
+
+↓
+
+Backend
+
+↓
+
+Database
+
+↓
+
+Queue
+
+↓
+
+Worker
+
+↓
+
+Analysis
+
+↓
+
+AI Gateway
+
+↓
+
+Report
+
+↓
+
+Database
+
+↓
+
+Frontend
+```
+
+Data always flows in one direction.
+
+No module should directly modify another module's internal state.
+
+All communication should happen through clearly defined interfaces.
+
+---
+
+# Pipeline Design Principles
+
+The pipeline follows these principles
+
+- Deterministic before AI
+- Modular execution
+- Stateless workers
+- Asynchronous processing
+- Immutable reports
+- Fault isolation
+- Horizontal scalability
+- Provider independence
+
+Every future feature should integrate into this pipeline instead of bypassing it.
+
+---
+
+---
+
+# Database Architecture
+
+PostgreSQL is the primary source of truth for QuantLint.
+
+All business-critical data is stored inside PostgreSQL.
+
+Redis is used only for temporary caching and background jobs.
+
+Cloudflare R2 stores binary files.
+
+---
+
+## Database Design Principles
+
+The database follows these principles:
+
+- UUID Primary Keys
+- Normalized Schema
+- Soft Deletes (where appropriate)
+- Auditability
+- Versioning
+- Referential Integrity
+
+Every table should contain the following common fields whenever applicable:
+
+- id
+- created_at
+- updated_at
+- created_by
+- updated_by
+
+---
+
+# Core Database Entities
+
+The core entities of QuantLint are:
+
+Users
+
+Projects
+
+Strategies
+
+Strategy Versions
+
+Analysis Jobs
+
+Analysis Results
+
+Rule Violations
+
+Backtests
+
+Reports
+
+Notifications
+
+Audit Logs
+
+Future entities can be added without affecting existing relationships.
+
+---
+
+# Entity Relationships
+
+```
+User
+
+│
+
+├── Projects
+
+│       │
+
+│       ├── Strategies
+
+│       │      │
+
+│       │      ├── Strategy Versions
+
+│       │      │
+
+│       │      ├── Analysis Jobs
+
+│       │      │        │
+
+│       │      │        ├── Analysis Results
+
+│       │      │        ├── Rule Violations
+
+│       │      │        ├── Backtests
+
+│       │      │        └── Reports
+
+│
+
+└── Notifications
+```
+
+---
+
+# Object Storage
+
+Cloudflare R2 stores
+
+- Uploaded strategy files
+- Generated PDF reports
+- Exported Markdown reports
+- Future attachments
+
+The database stores only metadata.
+
+The application should never store binary files directly inside PostgreSQL.
+
+---
+
+# Cache Architecture
+
+Redis is responsible for
+
+- Background Jobs
+- Queue Management
+- Temporary Caching
+- Rate Limiting
+- Session Caching
+
+Redis should never be treated as permanent storage.
+
+If Redis is cleared,
+
+the application should continue functioning normally.
+
+---
+
+# Frontend Architecture
+
+The frontend follows a feature-first architecture.
+
+```
+src/
+
+app/
+
+components/
+
+features/
+
+hooks/
+
+services/
+
+store/
+
+types/
+
+lib/
+
+styles/
+
+constants/
+```
+
+Each feature owns
+
+- Components
+- Hooks
+- Types
+- Services
+
+Avoid creating a massive shared folder.
+
+---
+
+# Frontend Layering
+
+```
+Pages
+
+↓
+
+Layouts
+
+↓
+
+Feature Components
+
+↓
+
+Reusable Components
+
+↓
+
+Hooks
+
+↓
+
+Services
+
+↓
+
+API Client
+```
+
+Business logic belongs inside hooks or services.
+
+Presentation logic belongs inside components.
+
+---
+
+# State Management
+
+QuantLint separates UI state from server state.
+
+UI State
+
+- Sidebar
+- Theme
+- Dialogs
+- Filters
+- Active Tabs
+
+Managed using
+
+Zustand
+
+---
+
+Server State
+
+- Projects
+- Strategies
+- Reports
+- Analysis Results
+
+Managed using
+
+TanStack Query
+
+---
+
+# API Architecture
+
+The backend follows REST principles.
+
+Resources are grouped logically.
+
+Example
+
+```
+/auth
+
+/users
+
+/projects
+
+/strategies
+
+/analysis
+
+/backtests
+
+/reports
+
+/settings
+
+/notifications
+```
+
+Every endpoint should
+
+- validate input
+- authenticate user
+- authorize action
+- execute service
+- return standardized response
+
+---
+
+# Standard API Response
+
+Successful responses should include
+
+- success
+- data
+- message
+
+Error responses should include
+
+- success
+- error
+- message
+- statusCode
+
+Internal implementation details should never be exposed.
+
+---
+
+# Authentication Architecture
+
+Authentication is handled using Better Auth.
+
+Alternative providers may be added later.
+
+Authentication Flow
+
+```
+User
+
+↓
+
+Login
+
+↓
+
+JWT
+
+↓
+
+Protected Route
+
+↓
+
+Backend Validation
+
+↓
+
+Authorized Request
+```
+
+Authentication and Authorization should remain independent.
+
+---
+
+# Authorization
+
+Every resource belongs to a user.
+
+Users can only access
+
+- their projects
+- their strategies
+- their reports
+- their analysis
+
+Future versions may introduce
+
+Organizations
+
+Teams
+
+Role Based Access Control
+
+---
+
+# File Upload Architecture
+
+Uploads follow this process
+
+```
+Upload
+
+↓
+
+Validation
+
+↓
+
+Virus Scan (Future)
+
+↓
+
+Object Storage
+
+↓
+
+Metadata
+
+↓
+
+Database
+
+↓
+
+Analysis Queue
+```
+
+Uploads should never execute automatically.
+
+---
+
+# Deployment Architecture
+
+Frontend
+
+↓
+
+Vercel
+
+Backend
+
+↓
+
+Railway or Render
+
+Database
+
+↓
+
+Supabase PostgreSQL
+
+Redis
+
+↓
+
+Upstash
+
+Storage
+
+↓
+
+Cloudflare R2
+
+Everything runs inside Docker containers.
+
+Development and Production environments should remain identical.
+
+---
+
+# Environment Variables
+
+Configuration should never be hardcoded.
+
+Examples include
+
+- Database URL
+- Redis URL
+- JWT Secret
+- AI API Keys
+- Storage Keys
+- Application URL
+
+Every secret belongs inside environment variables.
+
+---
+
+# Security Architecture
+
+Security is a core requirement.
+
+The application should
+
+- validate every request
+- sanitize every upload
+- validate every API payload
+- protect secrets
+- prevent code execution
+- prevent path traversal
+- limit upload size
+- rate limit expensive endpoints
+
+Never trust user input.
+
+---
+
+# Monitoring
+
+Future monitoring stack
+
+- PostHog
+- OpenTelemetry
+- Sentry
+
+Monitor
+
+- Worker Failures
+- API Errors
+- AI Costs
+- Response Times
+- Queue Length
+- Database Performance
+
+---
+
+# Logging
+
+Log
+
+- Authentication
+- Errors
+- Warnings
+- Analysis Jobs
+- Worker Events
+
+Never log
+
+- Passwords
+- Tokens
+- API Keys
+- Secrets
+
+Sensitive information must always be redacted.
+
+---
+
+# Scalability Strategy
+
+The application starts as a Modular Monolith.
+
+Each module should be independently scalable.
+
+Examples
+
+Heavy AI traffic
+
+↓
+
+Scale AI Workers
+
+Heavy Backtesting
+
+↓
+
+Scale Worker Pool
+
+Heavy Frontend Traffic
+
+↓
+
+Scale Frontend
+
+Database Bottleneck
+
+↓
+
+Upgrade PostgreSQL
+
+The architecture should avoid unnecessary rewrites during growth.
+
+---
+
+# Future Architecture
+
+As QuantLint grows,
+
+the Modular Monolith can evolve into independent services.
+
+Future services may include
+
+- Authentication Service
+- Analysis Service
+- AI Service
+- Backtesting Service
+- Reporting Service
+- Notification Service
+
+This migration should require minimal changes to business logic.
+
+---
+
+# Architecture Summary
+
+QuantLint follows six core architectural principles.
+
+1. Modular
+
+Every subsystem has one responsibility.
+
+2. Deterministic
+
+Financial calculations are never delegated to AI.
+
+3. Explainable
+
+AI explains results but never invents them.
+
+4. Secure
+
+Uploaded code is never executed directly.
+
+5. Scalable
+
+Expensive work runs asynchronously and services can scale independently.
+
+6. Provider Agnostic
+
+AI providers can be replaced without changing application logic.
+
+Every new feature added to QuantLint should reinforce these principles rather than bypass them.
+
+---
