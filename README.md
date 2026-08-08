@@ -47,11 +47,12 @@ QuantLint acts as a quality-assurance layer between strategy development and dep
                 Deployment Confidence
 ```
 
-**✨ Key Features**
+# **✨ Key Features**
 
 
 
-**🔍 Static Strategy Analysis**
+
+# **🔍 Static Strategy Analysis**
 
 QuantLint analyzes quantitative trading code to identify potentially dangerous patterns before execution.
 
@@ -75,7 +76,9 @@ Potentially unsafe signal generation
 
 Unintended data dependencies
 
-**⚙️ Quantitative Rule Engine**
+
+
+# **⚙️ Quantitative Rule Engine**
 
 QuantLint uses a deterministic rule engine to evaluate trading strategies against a collection of quantitative validation rules.
 
@@ -112,7 +115,9 @@ the trading decision is generated.
 
 Rules are designed to be deterministic, reproducible, and explainable.
 
-**📊 Risk & Performance Analysis**
+
+
+# **📊 Risk & Performance Analysis**
 
 QuantLint evaluates the quantitative characteristics of a strategy and its backtest results.
 
@@ -168,7 +173,9 @@ Portfolio diversification
 
 Capital utilization
 
-**🧠 AI-Powered Explanations**
+
+
+# **🧠 AI-Powered Explanations**
 
 QuantLint combines deterministic quantitative analysis with AI-assisted explanations.
 
@@ -238,7 +245,9 @@ Strategy Logic
 
 This provides a broader quality-assurance layer than traditional code review.
 
-**📑 Audit Reports**
+
+
+# **📑 Audit Reports**
 
 Every completed analysis produces a structured audit report.
 
@@ -284,7 +293,9 @@ Recommendations
 
 Actionable suggestions for improving the strategy.
 
-**📈 Audit Score**
+
+
+# **📈 Audit Score**
 
 QuantLint provides a consolidated strategy-quality score based on the results of the audit.
 
@@ -307,7 +318,9 @@ Passed Checks        314
 
 The score is intended to provide a quick overview while allowing developers to inspect the underlying findings.
 
-**🖥️ Developer Experience**
+
+
+# **🖥️ Developer Experience**
 
 QuantLint is designed as a developer tool rather than a traditional financial dashboard.
 
@@ -327,7 +340,9 @@ Clear explanations
 
 The design language follows modern developer platforms such as Vercel, Linear, GitHub, and other developer-first products.
 
-**💻 CLI**
+
+
+# **💻 CLI**
 
 QuantLint provides a command-line interface for integrating strategy validation into development workflows.
 
@@ -400,7 +415,9 @@ quantlint-report.pdf
 
 ```
 
-**🧰 Supported Technologies**
+
+
+# **🧰 Supported Technologies**
 
 QuantLint is designed to work with the Python quantitative ecosystem.
 
@@ -470,7 +487,9 @@ QuantLint follows a modular architecture.
 
 ```
 
-**🛠️ Technology Stack**
+
+
+# **🛠️ Technology Stack**
 
 Frontend
 
@@ -576,7 +595,9 @@ quantlint/
 
 ```
 
-**🔐 Security**
+
+
+# **🔐 Security**
 
 Trading strategies can contain proprietary intellectual property.
 
@@ -667,7 +688,9 @@ quantlint:
 
 This allows strategy quality checks to become part of the development lifecycle.
 
-**👥 Who Is QuantLint For?**
+
+
+# **👥 Who Is QuantLint For?**
 
 Quantitative Developers
 
@@ -693,7 +716,9 @@ Financial Engineering Teams
 
 Introduce automated quality checks into quantitative development pipelines.
 
-**🎯 Design Philosophy**
+
+
+# **🎯 Design Philosophy**
 
 QuantLint follows five principles.
 
@@ -717,7 +742,9 @@ Performance numbers should be calculated by reliable quantitative logic rather t
 
 A strategy should be treated as software that requires testing, validation, monitoring, and quality assurance.
 
-**🗺️ Roadmap**
+
+
+# **🗺️ Roadmap**
 
 Strategy Analysis
 
@@ -805,7 +832,9 @@ Additional trading frameworks
 
 CI/CD integrations
 
-**🚀 Getting Started**
+
+
+# **🚀 Getting Started**
 
 Requirements
 
@@ -869,7 +898,9 @@ Start the API:
 
 uvicorn app.main:app --reload
 
-**🧪 Testing**
+
+
+# **🧪 Testing**
 
 Run frontend tests:
 
@@ -889,7 +920,9 @@ Run linting:
 
 npm run lint
 
-**🤝 Contributing**
+
+
+# **🤝 Contributing**
 
 Contributions are welcome.
 
@@ -913,11 +946,15 @@ Example:
 
 git checkout -b feature/new-validation-rule
 
-**📜 License**
+
+
+# **📜 License**
 QuantLint is released under the MIT License.
 See LICENSE for details.
 
-**⚠️ Disclaimer**
+
+
+# **⚠️ Disclaimer**
 
 QuantLint is a software and quantitative research tool.
 It does not guarantee the profitability, correctness, or future performance of any trading strategy.
@@ -925,7 +962,9 @@ QuantLint does not provide financial, investment, or trading advice.
 Users are responsible for independently validating strategies, assumptions, data, and results before using them in live trading.
 Past performance does not guarantee future results.
 
-**🌐 QuantLint**
+
+
+#**🌐 QuantLint**
 
 Quality assurance for quantitative trading.
 Build strategies.
