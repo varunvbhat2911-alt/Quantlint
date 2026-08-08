@@ -25,7 +25,7 @@ function GithubIcon({ className }: { className?: string }) {
 const NAV_ITEMS = [
   { title: "Features", href: "#features" },
   { title: "Workflow", href: "#workflow" },
-  { title: "Documentation", href: "#documentation" },
+  { title: "Documentation", href: "/docs" },
   { title: "FAQ", href: "#faq" },
 ];
 
@@ -112,11 +112,12 @@ export function Navbar() {
             variant="ghost"
             size="sm"
             className="text-xs text-muted-foreground hover:text-foreground"
+            asChild
           >
-            Login
+            <Link href="/dashboard">Login</Link>
           </Button>
           <Button size="sm" className="text-xs gap-1.5 rounded-full px-4" asChild>
-            <Link href="#audit-demo">
+            <Link href="/audit/new">
               Start Free Audit
               <ArrowRight className="h-3.5 w-3.5" />
             </Link>
@@ -158,11 +159,11 @@ export function Navbar() {
               GitHub
             </a>
             <div className="flex items-center gap-3 pt-2">
-              <Button variant="outline" size="sm" className="flex-1 text-xs">
-                Login
+              <Button variant="outline" size="sm" className="flex-1 text-xs" asChild>
+                <Link href="/dashboard">Login</Link>
               </Button>
               <Button size="sm" className="flex-1 gap-1.5 text-xs rounded-full" asChild>
-                <Link href="#audit-demo" onClick={() => setMobileMenuOpen(false)}>
+                <Link href="/audit/new" onClick={() => setMobileMenuOpen(false)}>
                   Start Free Audit
                 </Link>
               </Button>

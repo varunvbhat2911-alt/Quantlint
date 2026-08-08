@@ -29,7 +29,7 @@ export function CtaSection() {
 
           <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
             <Button size="lg" className="rounded-full px-8" asChild>
-              <Link href="#audit-demo">
+              <Link href="/audit/new">
                 Start Free Audit
                 <ArrowRight className="h-4 w-4" />
               </Link>
@@ -40,7 +40,7 @@ export function CtaSection() {
               className="rounded-full px-8 border-border/80"
               asChild
             >
-              <Link href="#documentation">Documentation</Link>
+              <Link href="/docs">Documentation</Link>
             </Button>
           </div>
 

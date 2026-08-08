@@ -99,19 +99,19 @@ export function FooterSection() {
             </h4>
             <ul className="space-y-2 text-xs text-muted-foreground font-normal">
               <li>
-                <a href="#documentation" className="hover:text-foreground transition-colors">
+                <Link href="/docs" className="hover:text-foreground transition-colors">
                   Documentation
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="#documentation" className="hover:text-foreground transition-colors">
+                <Link href="/docs#rules" className="hover:text-foreground transition-colors">
                   Rule Library
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="#documentation" className="hover:text-foreground transition-colors">
+                <Link href="/docs#api" className="hover:text-foreground transition-colors">
                   API Reference
-                </a>
+                </Link>
               </li>
               <li>
                 <a href="#faq" className="hover:text-foreground transition-colors">

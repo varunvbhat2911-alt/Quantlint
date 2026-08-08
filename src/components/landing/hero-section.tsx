@@ -121,7 +121,7 @@ export function HeroSection() {
                   className="rounded-full px-7 text-sm font-medium"
                   asChild
                 >
-                  <Link href="#audit-demo">
+                  <Link href="/audit/new">
                     Start Free Audit
                     <ArrowRight className="ml-1 h-4 w-4" />
                   </Link>
@@ -132,7 +132,7 @@ export function HeroSection() {
                   className="rounded-full px-7 text-sm font-medium border-border/80"
                   asChild
                 >
-                  <Link href="#documentation">Documentation</Link>
+                  <Link href="/docs">Documentation</Link>
                 </Button>
               </div>
 
