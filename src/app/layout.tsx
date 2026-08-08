@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
 import { ThemeProvider } from "@/components/common/theme-provider";
+import { PreferencesProvider } from "@/hooks/use-preferences";
 import "./globals.css";
 
 const inter = Inter({
@@ -36,7 +37,7 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          {children}
+          <PreferencesProvider>{children}</PreferencesProvider>
         </ThemeProvider>
       </body>
     </html>

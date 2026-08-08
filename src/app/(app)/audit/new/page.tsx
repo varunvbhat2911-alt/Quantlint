@@ -38,6 +38,8 @@ import {
   formatFileSize,
   createAuditDraftId,
 } from "@/lib/audit-draft";
+import { usePreferences } from "@/hooks/use-preferences";
+import { PreferenceTooltip } from "@/components/settings/preference-tooltip";
 
 /* ────────────────────────────────────────────────────────── */
 /*  INPUT METHOD TABS                                         */
@@ -389,9 +391,11 @@ function AuditConfiguration({
     <div className="space-y-6">
       {/* Analysis Depth */}
       <div className="space-y-3">
-        <label className="text-sm font-semibold text-foreground">
-          Analysis Depth
-        </label>
+        <PreferenceTooltip content="Controls how thoroughly QuantLint analyzes your strategy. Deep mode runs all rule categories with extended checks.">
+          <label className="text-sm font-semibold text-foreground">
+            Analysis Depth
+          </label>
+        </PreferenceTooltip>
         <div className="grid grid-cols-3 gap-2">
           {ANALYSIS_DEPTH_OPTIONS.map((opt) => (
             <button
@@ -417,9 +421,11 @@ function AuditConfiguration({
       {/* Rule Categories */}
       <div className="space-y-3">
         <div className="flex items-center justify-between">
-          <label className="text-sm font-semibold text-foreground">
-            Rule Categories
-          </label>
+          <PreferenceTooltip content="Select which rule categories to include in the audit. Disabled categories are skipped during analysis.">
+            <label className="text-sm font-semibold text-foreground">
+              Rule Categories
+            </label>
+          </PreferenceTooltip>
           <button
             type="button"
             onClick={() =>
@@ -607,6 +613,7 @@ function Toast({
 
 export default function NewAuditPage() {
   const router = useRouter();
+  const { preferences, mounted: preferencesMounted } = usePreferences();
 
   // Input method
   const [inputMethod, setInputMethod] = React.useState<InputMethod>("upload");
@@ -630,6 +637,16 @@ export default function NewAuditPage() {
   const [ruleCategories, setRuleCategories] = React.useState<RuleCategory[]>([
     ...RULE_CATEGORIES,
   ]);
+  const [defaultsApplied, setDefaultsApplied] = React.useState(false);
+
+  React.useEffect(() => {
+    if (preferencesMounted && !defaultsApplied) {
+      setFramework(preferences.defaultFramework);
+      setAnalysisDepth(preferences.defaultAnalysisDepth);
+      setRuleCategories([...preferences.defaultRuleCategories]);
+      setDefaultsApplied(true);
+    }
+  }, [preferencesMounted, defaultsApplied, preferences]);
 
   // Toast
   const [toast, setToast] = React.useState<{

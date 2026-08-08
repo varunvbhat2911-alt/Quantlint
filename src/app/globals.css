@@ -198,3 +198,73 @@ body {
 @utility screen-line-bottom {
     @apply relative after:absolute after:bottom-0 after:left-[-100vw] after:-z-1 after:h-px after:w-[200vw] after:bg-line;
 }
+
+/* ── QuantLint preference modes ─────────────────────────── */
+
+html.quantlint-compact {
+  --ql-page-py: 1.5rem;
+  --ql-section-gap: 1.75rem;
+  --ql-card-padding: 1rem;
+}
+
+html:not(.quantlint-compact) {
+  --ql-page-py: 2rem;
+  --ql-section-gap: 2.5rem;
+  --ql-card-padding: 1.25rem;
+}
+
+html.quantlint-compact main > div {
+  --tw-space-y-reverse: 0;
+}
+
+html.quantlint-compact .space-y-10 > :not(:last-child) {
+  margin-bottom: calc(var(--ql-section-gap) * -1);
+  margin-top: calc(var(--ql-section-gap) * calc(1 - var(--tw-space-y-reverse)));
+}
+
+html.quantlint-compact .space-y-10 > :not([hidden]) ~ :not([hidden]) {
+  margin-top: var(--ql-section-gap);
+}
+
+html.quantlint-compact .space-y-8 > :not([hidden]) ~ :not([hidden]) {
+  margin-top: 1.5rem;
+}
+
+html.quantlint-compact [class*="p-5"] {
+  padding: var(--ql-card-padding);
+}
+
+html.quantlint-compact .py-8 {
+  padding-top: var(--ql-page-py);
+  padding-bottom: var(--ql-page-py);
+}
+
+html.quantlint-compact .sm\:py-10 {
+  padding-top: calc(var(--ql-page-py) + 0.5rem);
+  padding-bottom: calc(var(--ql-page-py) + 0.5rem);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html *,
+  html *::before,
+  html *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+html.quantlint-reduce-motion *,
+html.quantlint-reduce-motion *::before,
+html.quantlint-reduce-motion *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+}
+
+html.quantlint-reduce-motion ::view-transition-group(root),
+html.quantlint-reduce-motion ::view-transition-old(root),
+html.quantlint-reduce-motion ::view-transition-new(root) {
+  animation: none !important;
+}

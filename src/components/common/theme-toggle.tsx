@@ -4,32 +4,15 @@ import * as React from "react";
 import { useTheme } from "next-themes";
 import { Moon, Sun } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { usePreferences, changeThemeWithTransition } from "@/hooks/use-preferences";
 
 const emptySubscribe = () => () => {};
 const getClientSnapshot = () => true;
 const getServerSnapshot = () => false;
 
-function toggleTheme(
-  currentTheme: string | undefined,
-  setTheme: (theme: string) => void
-) {
-  const nextTheme = currentTheme === "dark" ? "light" : "dark";
-
-  const applyTheme = () => setTheme(nextTheme);
-
-  if (typeof document !== "undefined" && "startViewTransition" in document) {
-    (
-      document as Document & {
-        startViewTransition: (callback: () => void) => void;
-      }
-    ).startViewTransition(applyTheme);
-  } else {
-    applyTheme();
-  }
-}
-
 export function ThemeToggle() {
   const { theme, setTheme, resolvedTheme } = useTheme();
+  const { preferences } = usePreferences();
   const mounted = React.useSyncExternalStore(
     emptySubscribe,
     getClientSnapshot,
@@ -47,11 +30,18 @@ export function ThemeToggle() {
   }
 
   const isDark = (resolvedTheme ?? theme) === "dark";
+  const nextTheme = isDark ? "light" : "dark";
 
   return (
     <button
       type="button"
-      onClick={() => toggleTheme(resolvedTheme ?? theme, setTheme)}
+      onClick={() =>
+        changeThemeWithTransition(
+          nextTheme,
+          setTheme,
+          preferences.reduceMotion
+        )
+      }
       className={cn(
         "inline-flex h-9 w-9 items-center justify-center rounded-lg",
         "border border-border bg-background text-muted-foreground",
@@ -65,3 +55,4 @@ export function ThemeToggle() {
     </button>
   );
 }
+
