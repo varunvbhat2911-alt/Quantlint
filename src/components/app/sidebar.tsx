@@ -7,12 +7,18 @@ import { ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { APP_NAV, DOC_NAV_SECTIONS } from "@/lib/navigation";
 import { getDocBySlug, type DocStatus } from "@/lib/docs/registry";
+import { QuantLintLogo } from "@/components/common/quantlint-logo";
 
 export function Sidebar() {
   const pathname = usePathname();
 
   return (
     <aside className="hidden md:flex w-56 shrink-0 flex-col border-r border-border/40 bg-background">
+      <div className="border-b border-border/40 px-4 py-3">
+        <Link href="/dashboard" className="flex items-center group">
+          <QuantLintLogo showWordmark className="transition-opacity group-hover:opacity-80" />
+        </Link>
+      </div>
       <nav className="flex flex-col gap-1 p-4">
         {APP_NAV.map((item) => {
           const Icon = item.icon;

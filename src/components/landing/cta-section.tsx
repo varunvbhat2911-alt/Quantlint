@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { ArrowRight } from "lucide-react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -17,8 +18,17 @@ export function CtaSection() {
           initial={{ opacity: 0, y: 12 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="relative overflow-hidden rounded-2xl border border-border/60 bg-card/50 px-6 py-16 sm:px-12 text-center"
+          className="relative overflow-hidden rounded-2xl border border-border/60 bg-card/50 px-6 py-12 sm:px-12 text-center"
         >
+          <div className="mb-8 flex justify-center">
+            <Image
+              src="/branding/quantlint-artwork-1600.png"
+              alt="QuantLint bull and bear brand artwork"
+              width={280}
+              height={280}
+              className="h-44 sm:h-52 w-auto object-contain drop-shadow-md pointer-events-none select-none"
+            />
+          </div>
           <h2 className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
             Start auditing your strategies today.
           </h2>

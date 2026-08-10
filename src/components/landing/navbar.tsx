@@ -3,11 +3,12 @@
 import * as React from "react";
 import Link from "next/link";
 import { motion } from "motion/react";
-import { ShieldCheck, Menu, X, ArrowRight } from "lucide-react";
+import { Menu, X, ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/common/theme-toggle";
 import { LineNav } from "@/components/line-nav";
+import { QuantLintLogo } from "@/components/common/quantlint-logo";
 
 function GithubIcon({ className }: { className?: string }) {
   return (
@@ -81,10 +82,7 @@ export function Navbar() {
     >
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6 sm:px-8">
         <Link href="/" className="flex items-center gap-2 group shrink-0">
-          <ShieldCheck className="h-5 w-5 text-foreground transition-opacity group-hover:opacity-80" />
-          <span className="text-sm font-semibold tracking-tight text-foreground font-mono">
-            QuantLint
-          </span>
+          <QuantLintLogo showWordmark className="transition-opacity group-hover:opacity-80" />
         </Link>
 
         <nav className="hidden md:flex items-center gap-6">

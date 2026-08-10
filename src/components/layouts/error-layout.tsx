@@ -1,6 +1,7 @@
 import Link from "next/link";
-import { ShieldCheck, ArrowLeft, LayoutDashboard, Plus } from "lucide-react";
+import { ArrowLeft, LayoutDashboard, Plus } from "lucide-react";
 import { PrimaryButton, SecondaryButton } from "@/components/app/buttons";
+import { QuantLintLogo } from "@/components/common/quantlint-logo";
 
 export function ErrorLayout({
   title,
@@ -15,10 +16,7 @@ export function ErrorLayout({
     <div className="flex min-h-[70vh] flex-col items-center justify-center px-6 py-24">
       {/* QuantLint branding */}
       <Link href="/" className="mb-10 flex items-center gap-2 group">
-        <ShieldCheck className="h-5 w-5 text-muted-foreground transition-colors group-hover:text-foreground" />
-        <span className="text-sm font-semibold tracking-tight text-muted-foreground transition-colors group-hover:text-foreground font-mono">
-          QuantLint
-        </span>
+        <QuantLintLogo size={32} showWordmark={false} className="transition-opacity group-hover:opacity-80" />
       </Link>
 
       <div className="max-w-md text-center space-y-5">

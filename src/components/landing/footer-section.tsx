@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { ShieldCheck } from "lucide-react";
+import { QuantLintLogo } from "@/components/common/quantlint-logo";
 
 function GithubIcon({ className }: { className?: string }) {
   return (
@@ -28,10 +28,7 @@ export function FooterSection() {
           {/* Column 1: Brand */}
           <div className="space-y-4 md:col-span-1">
             <Link href="/" className="flex items-center gap-2">
-              <ShieldCheck className="h-5 w-5 text-foreground" />
-              <span className="text-sm font-semibold tracking-tight text-foreground">
-                QuantLint
-              </span>
+              <QuantLintLogo showWordmark />
             </Link>
             <p className="text-xs text-muted-foreground leading-relaxed font-normal">
               Quality assurance platform for quantitative trading strategies. Verify logic, calculate risk, and eliminate statistical bias.

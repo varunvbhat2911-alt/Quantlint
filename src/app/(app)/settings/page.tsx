@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
+import Image from "next/image";
 import {
   ExternalLink,
   KeyRound,
@@ -586,13 +587,27 @@ export default function SettingsPage() {
             <SettingsSection id="about" title="About">
               <Card className="border-border/40 bg-card/40">
                 <CardContent className="space-y-5 p-5">
-                  <div className="space-y-1">
-                    <h3 className="text-lg font-semibold text-foreground">
-                      QuantLint
-                    </h3>
-                    <p className="text-sm text-muted-foreground">
-                      Quality assurance for quantitative trading.
-                    </p>
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div className="space-y-1">
+                      <h3 className="text-lg font-semibold text-foreground">
+                        QuantLint
+                      </h3>
+                      <p className="text-sm font-medium text-foreground/80">
+                        Quality in Every Strategy
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Quality assurance for quantitative trading.
+                      </p>
+                    </div>
+                    <div className="shrink-0 flex items-center justify-center">
+                      <Image
+                        src="/branding/quantlint-artwork-1200.png"
+                        alt="QuantLint bull and bear brand artwork"
+                        width={140}
+                        height={140}
+                        className="h-24 w-auto object-contain pointer-events-none select-none"
+                      />
+                    </div>
                   </div>
                   <dl className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
                     <div>

@@ -4,7 +4,6 @@ import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
-  ShieldCheck,
   ArrowLeft,
   Search,
   Menu,
@@ -15,6 +14,7 @@ import {
 import { ThemeToggle } from "@/components/common/theme-toggle";
 import { DocsSidebar } from "@/components/app/sidebar";
 import { SecondaryButton } from "@/components/app/buttons";
+import { QuantLintLogo } from "@/components/common/quantlint-logo";
 import { searchDocs, type DocPage, type DocStatus } from "@/lib/docs/registry";
 import { cn } from "@/lib/utils";
 
@@ -223,10 +223,7 @@ export function DocumentationLayout({
             </button>
 
             <Link href="/" className="flex items-center gap-2 group">
-              <ShieldCheck className="h-5 w-5 text-foreground" />
-              <span className="text-sm font-semibold tracking-tight font-mono">
-                QuantLint
-              </span>
+              <QuantLintLogo showWordmark />
               <span className="text-xs text-muted-foreground font-mono">
                 / docs
               </span>

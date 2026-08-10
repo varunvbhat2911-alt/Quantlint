@@ -3,9 +3,10 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ShieldCheck, Menu, X } from "lucide-react";
+import { Menu, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/common/theme-toggle";
+import { QuantLintLogo } from "@/components/common/quantlint-logo";
 import { PrimaryButton, SecondaryButton } from "@/components/app/buttons";
 import { APP_NAV } from "@/lib/navigation";
 
@@ -18,10 +19,7 @@ export function AppNavbar() {
       <div className="flex h-14 items-center justify-between px-4 sm:px-6">
         <div className="flex items-center gap-6">
           <Link href="/dashboard" className="flex items-center gap-2 group shrink-0">
-            <ShieldCheck className="h-5 w-5 text-foreground transition-opacity group-hover:opacity-80" />
-            <span className="text-sm font-semibold tracking-tight text-foreground font-mono">
-              QuantLint
-            </span>
+            <QuantLintLogo showWordmark className="transition-opacity group-hover:opacity-80" />
           </Link>
 
           <nav className="hidden lg:flex items-center gap-1">
