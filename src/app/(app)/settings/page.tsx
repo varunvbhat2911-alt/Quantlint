@@ -606,6 +606,7 @@ export default function SettingsPage() {
                         width={140}
                         height={140}
                         className="h-24 w-auto object-contain pointer-events-none select-none"
+                        unoptimized
                       />
                     </div>
                   </div>

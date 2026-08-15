@@ -27,6 +27,7 @@ export function CtaSection() {
               width={280}
               height={280}
               className="h-44 sm:h-52 w-auto object-contain drop-shadow-md pointer-events-none select-none"
+              unoptimized
             />
           </div>
           <h2 className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
