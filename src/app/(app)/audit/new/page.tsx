@@ -654,6 +654,9 @@ export default function NewAuditPage() {
     visible: boolean;
   }>({ message: "", visible: false });
 
+  // Audit creation request in flight
+  const [submitting, setSubmitting] = React.useState(false);
+
   // Derived
   const hasUpload = inputMethod === "upload" && file !== null && !fileError;
   const hasCode = inputMethod === "paste" && code.trim().length > 0;
@@ -689,7 +692,7 @@ export default function NewAuditPage() {
     }
   }
 
-  function handleRunAudit() {
+  async function handleRunAudit() {
     // Validation
     if (!hasInput) {
       setToast({
@@ -715,14 +718,68 @@ export default function NewAuditPage() {
       createdAt: new Date().toISOString(),
     };
 
-    // Store in sessionStorage so /audit/running can pick it up
+    // Still cached for the mock running page display; the real job is the
+    // database row created via POST /api/audits below.
     try {
       sessionStorage.setItem("quantlint_audit_draft", JSON.stringify(draft));
     } catch {
       // sessionStorage unavailable — proceed anyway
     }
 
-    router.push("/audit/running");
+    setSubmitting(true);
+    try {
+      const res = await fetch("/api/audits", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          strategyName: draft.strategyName,
+          inputType: draft.inputType,
+          fileName: draft.fileName,
+          framework: draft.framework,
+          analysisDepth: draft.analysisDepth,
+          ruleCategories: draft.ruleCategories,
+          code: draft.code,
+        }),
+      });
+
+      let payload: unknown = null;
+      try {
+        payload = await res.json();
+      } catch {
+        // non-JSON error body
+      }
+      const auditId =
+        typeof payload === "object" &&
+        payload !== null &&
+        "audit" in payload &&
+        typeof (payload as { audit?: unknown }).audit === "object" &&
+        (payload as { audit?: { id?: unknown } }).audit !== null
+          ? (payload as { audit?: { id?: unknown } }).audit?.id
+          : undefined;
+
+      if (!res.ok || typeof auditId !== "string") {
+        const message =
+          typeof payload === "object" &&
+          payload !== null &&
+          "error" in payload &&
+          typeof (payload as { error?: unknown }).error === "string"
+            ? (payload as { error: string }).error
+            : `Could not start the audit (HTTP ${res.status}).`;
+        setToast({ message, visible: true });
+        return;
+      }
+
+      router.push(
+        `/audit/running?jobId=${encodeURIComponent(auditId)}`,
+      );
+    } catch {
+      setToast({
+        message: "Network error — could not start the audit.",
+        visible: true,
+      });
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -825,7 +882,7 @@ export default function NewAuditPage() {
               />
               <PrimaryButton
                 className="w-full"
-                disabled={!hasInput}
+                disabled={!hasInput || submitting}
                 onClick={handleRunAudit}
               >
                 <Play className="h-4 w-4" />
@@ -848,7 +905,7 @@ export default function NewAuditPage() {
               />
               <PrimaryButton
                 className="w-full"
-                disabled={!hasInput}
+                disabled={!hasInput || submitting}
                 onClick={handleRunAudit}
               >
                 <Play className="h-4 w-4" />

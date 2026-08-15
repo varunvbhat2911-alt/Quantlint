@@ -1,0 +1,3 @@
+# Supabase CLI local state (standard ignore file created by `supabase init`)
+.branches
+.temp

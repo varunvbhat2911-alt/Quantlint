@@ -25,6 +25,7 @@ import {
   Circle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useSearchParams } from "next/navigation";
 import { PageHeader } from "@/components/app/page-header";
 import { PrimaryButton, SecondaryButton } from "@/components/app/buttons";
 import {
@@ -1128,16 +1129,73 @@ function MissingResultState() {
 /* ────────────────────────────────────────────────────────── */
 
 export default function AuditResultPage() {
+  // useSearchParams requires a Suspense boundary on a prerendered route.
+  return (
+    <React.Suspense fallback={null}>
+      <AuditResultPageInner />
+    </React.Suspense>
+  );
+}
+
+function AuditResultPageInner() {
+  const searchParams = useSearchParams();
+  // Real audits arrive as ?jobId=<uuid>; without it the mock prototype data
+  // is shown (kept as the migration path from mock to real data).
+  const jobId = searchParams.get("jobId");
+
   const [toast, setToast] = React.useState<{
     message: string;
     visible: boolean;
   }>({ message: "", visible: false });
 
-  // For now we always show MOCK_AUDIT_RESULT.
-  // If result were null (future: no data from backend), show MissingResultState.
-  const result: AuditResultData | null = MOCK_AUDIT_RESULT;
+  const [result, setResult] = React.useState<AuditResultData | null>(
+    jobId ? null : MOCK_AUDIT_RESULT,
+  );
+  const [loadError, setLoadError] = React.useState<string | null>(null);
 
-  if (!result) {
+  // Load the persisted result for a completed audit.
+  React.useEffect(() => {
+    if (!jobId) return;
+    let cancelled = false;
+
+    void fetch(`/api/audits/${jobId}/results`, { cache: "no-store" })
+      .then(async (res) => {
+        const payload: unknown = await res.json().catch(() => null);
+        if (cancelled) return;
+        if (
+          res.ok &&
+          typeof payload === "object" &&
+          payload !== null &&
+          "result" in payload
+        ) {
+          setResult((payload as { result: AuditResultData }).result);
+        } else {
+          const message =
+            typeof payload === "object" &&
+            payload !== null &&
+            "error" in payload &&
+            typeof (payload as { error?: unknown }).error === "string"
+              ? (payload as { error: string }).error
+              : "Failed to load audit results.";
+          setLoadError(message);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setLoadError("Failed to load audit results.");
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [jobId]);
+
+  // Still loading a real result — render nothing rather than flashing the
+  // not-found state.
+  if (jobId && !result && !loadError) {
+    return null;
+  }
+
+  if (loadError || !result) {
     return <MissingResultState />;
   }
 

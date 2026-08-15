@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   CheckCircle2,
   Circle,
@@ -44,6 +44,9 @@ import {
   type StepState,
 } from "@/hooks/use-audit-simulation";
 import type { StepStatus } from "@/lib/mock-data/audit-simulation";
+import { useAuditJob } from "@/hooks/use-audit-job";
+import { AUDIT_STAGES, STAGE_META } from "@/lib/audit-engine/types";
+import type { AuditSummary } from "@/lib/audits";
 
 /* ────────────────────────────────────────────────────────── */
 /*  STEP ICON MAPPING                                         */
@@ -669,7 +672,36 @@ function MissingSessionState() {
 /* ────────────────────────────────────────────────────────── */
 
 export default function AuditRunningPage() {
+  // useSearchParams requires a Suspense boundary on a prerendered route.
+  return (
+    <React.Suspense fallback={null}>
+      <AuditRunningPageInner />
+    </React.Suspense>
+  );
+}
+
+function AuditRunningPageInner() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // Real audit job id created by POST /api/audits (?jobId=<uuid>). When
+  // present, the page runs in real mode (useAuditJob polling); without it,
+  // the legacy mock-simulation flow is preserved.
+  const jobId = searchParams.get("jobId");
+
+  // Real mode: the database-backed audit drives everything.
+  if (jobId) {
+    return <RealAuditContent jobId={jobId} router={router} />;
+  }
+
+  return <MockAuditFlow router={router} />;
+}
+
+/* ────────────────────────────────────────────────────────── */
+/*  LEGACY MOCK FLOW (no jobId — pre-database prototype path) */
+/* ────────────────────────────────────────────────────────── */
+
+function MockAuditFlow({ router }: { router: ReturnType<typeof useRouter> }) {
   const [cancelOpen, setCancelOpen] = React.useState(false);
   const [draft, setDraft] = React.useState<AuditDraft | null>(null);
   const [draftLoaded, setDraftLoaded] = React.useState(false);
@@ -699,6 +731,7 @@ export default function AuditRunningPage() {
 
   return (
     <AuditRunningContent
+      jobId={null}
       draft={draft}
       cancelOpen={cancelOpen}
       setCancelOpen={setCancelOpen}
@@ -712,16 +745,20 @@ export default function AuditRunningPage() {
 /* ────────────────────────────────────────────────────────── */
 
 function AuditRunningContent({
+  jobId,
   draft,
   cancelOpen,
   setCancelOpen,
   router,
 }: {
+  jobId: string | null;
   draft: AuditDraft;
   cancelOpen: boolean;
   setCancelOpen: (open: boolean) => void;
   router: ReturnType<typeof useRouter>;
 }) {
+  // Mock simulation until the real pipeline lands; the polling hook that
+  // replaces it polls GET /api/audits/[jobId] keyed on jobId.
   const simulation = useAuditSimulation(draft.framework);
 
   const fwLabel =
@@ -862,6 +899,365 @@ function AuditRunningContent({
         {/* Mobile cancel */}
         <div className="lg:hidden">
           <StrategyInfoCard draft={draft} />
+          <button
+            type="button"
+            onClick={() => setCancelOpen(true)}
+            className="mt-4 w-full flex items-center justify-center gap-2 rounded-full border border-border/60 px-4 py-2 text-xs font-medium font-mono text-muted-foreground hover:text-foreground hover:border-border transition-all duration-150"
+          >
+            <X className="h-3.5 w-3.5" />
+            Cancel Audit
+          </button>
+        </div>
+      </div>
+
+      {/* Cancel dialog */}
+      <CancelDialog
+        open={cancelOpen}
+        onClose={() => setCancelOpen(false)}
+        onConfirm={() => {
+          setCancelOpen(false);
+          router.push("/audit/new");
+        }}
+      />
+    </>
+  );
+}
+
+/* ────────────────────────────────────────────────────────── */
+/*  REAL AUDIT CONTENT (jobId present — database-backed)      */
+/* ────────────────────────────────────────────────────────── */
+
+/* Map real backend progress (completed-stage fraction) to step statuses.
+ * No artificial timers: statuses derive from polled progress only. */
+function deriveRealSteps(
+  status: "loading" | "queued" | "running" | "completed" | "failed" | "error",
+  progress: number,
+): StepState[] {
+  const total = AUDIT_STAGES.length;
+  const completed =
+    status === "completed" ? total : Math.min(total, Math.round((progress / 100) * total));
+  return AUDIT_STAGES.map((stage, i) => {
+    let stepStatus: StepStatus = "pending";
+    if (i < completed) stepStatus = "completed";
+    else if (status === "failed" && i === completed) stepStatus = "error";
+    else if (i === completed && status === "running") stepStatus = "running";
+    return {
+      id: stage,
+      label: STAGE_META[stage].label,
+      description: STAGE_META[stage].description,
+      detail: STAGE_META[stage].detail,
+      durationMs: 0,
+      status: stepStatus,
+    };
+  });
+}
+
+type RealCompletion = {
+  score: number;
+  rulesChecked: number;
+  rulesPassed: number;
+  warnings: number;
+  critical: number;
+  issuesFound: number;
+};
+
+function RealAuditContent({
+  jobId,
+  router,
+}: {
+  jobId: string;
+  router: ReturnType<typeof useRouter>;
+}) {
+  const job = useAuditJob(jobId);
+  const [cancelOpen, setCancelOpen] = React.useState(false);
+  const [logs, setLogs] = React.useState<{ timestamp: string; message: string }[]>([]);
+  const [completion, setCompletion] = React.useState<RealCompletion | null>(null);
+  const [failureMessage, setFailureMessage] = React.useState<string | null>(null);
+  const lastProgressRef = React.useRef(-1);
+
+  function appendLog(message: string) {
+    const now = new Date();
+    const timestamp = [
+      now.getHours(),
+      now.getMinutes(),
+      now.getSeconds(),
+    ]
+      .map((n) => n.toString().padStart(2, "0"))
+      .join(":");
+    setLogs((prev) => [...prev, { timestamp, message }]);
+  }
+
+  // Log real transitions observed via polling
+  React.useEffect(() => {
+    if (!job.audit) return;
+    if (lastProgressRef.current === -1) {
+      appendLog(`Connected to audit job ${jobId.slice(0, 8)}…`);
+      appendLog(`Status: ${job.audit.status} · ${job.audit.progress}%`);
+      lastProgressRef.current = job.audit.progress;
+      return;
+    }
+    if (job.audit.progress > lastProgressRef.current) {
+      const completed = Math.min(
+        AUDIT_STAGES.length,
+        Math.round((job.audit.progress / 100) * AUDIT_STAGES.length),
+      );
+      const stage = AUDIT_STAGES[completed - 1];
+      if (stage) {
+        appendLog(`${STAGE_META[stage].label} completed · ${job.audit.progress}%`);
+      }
+      lastProgressRef.current = job.audit.progress;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [job.audit?.progress, job.audit?.status]);
+
+  // On completion, pull the persisted summary counts
+  React.useEffect(() => {
+    if (job.status !== "completed" || completion) return;
+    appendLog("Audit completed");
+    void fetch(`/api/audits/${jobId}/results`, { cache: "no-store" })
+      .then(async (res) => {
+        const payload: unknown = await res.json().catch(() => null);
+        if (
+          res.ok &&
+          typeof payload === "object" &&
+          payload !== null &&
+          "result" in payload
+        ) {
+          const r = (payload as {
+            result: {
+              score: number;
+              rulesChecked: number;
+              rulesPassed: number;
+              warnings: number;
+              critical: number;
+              violations: unknown[];
+            };
+          }).result;
+          setCompletion({
+            score: r.score,
+            rulesChecked: r.rulesChecked,
+            rulesPassed: r.rulesPassed,
+            warnings: r.warnings,
+            critical: r.critical,
+            issuesFound: r.violations.length,
+          });
+        }
+      })
+      .catch(() => {
+        // Counts are cosmetic here; the result page loads the full data.
+      });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [job.status]);
+
+  // On failure, pull the failure reason from the persisted timeline
+  React.useEffect(() => {
+    if (job.status !== "failed" || failureMessage) return;
+    appendLog("Audit failed");
+    void fetch(`/api/audits/${jobId}/results`, { cache: "no-store" })
+      .then(async (res) => {
+        const payload: unknown = await res.json().catch(() => null);
+        if (
+          res.ok &&
+          typeof payload === "object" &&
+          payload !== null &&
+          "result" in payload
+        ) {
+          const timeline = (payload as { result: { timeline: { label: string }[] } })
+            .result.timeline;
+          const last = timeline[timeline.length - 1];
+          if (last?.label) setFailureMessage(last.label);
+        }
+      })
+      .catch(() => {
+        // Fall through to the generic message below.
+      });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [job.status]);
+
+  // ── Terminal states ─────────────────────────────────────
+
+  if (job.status === "error" || job.notFound) {
+    return (
+      <div className="space-y-10">
+        <PageHeader
+          title="Audit Unavailable"
+          subtitle="This audit job could not be found."
+          breadcrumbs={[
+            { label: "Dashboard", href: "/dashboard" },
+            { label: "New Audit", href: "/audit/new" },
+            { label: "Running" },
+          ]}
+        />
+        <ErrorState
+          error={job.pollError ?? "The audit job was not found."}
+          onRetry={() => router.push("/audit/new")}
+        />
+      </div>
+    );
+  }
+
+  if (job.status === "failed") {
+    return (
+      <div className="space-y-10">
+        <PageHeader
+          title="Audit Error"
+          subtitle="Something went wrong while processing this strategy."
+          breadcrumbs={[
+            { label: "Dashboard", href: "/dashboard" },
+            { label: "New Audit", href: "/audit/new" },
+            { label: "Error" },
+          ]}
+        />
+        <ErrorState
+          error={
+            failureMessage ?? "The audit could not be completed for this strategy."
+          }
+          onRetry={() => router.push("/audit/new")}
+        />
+      </div>
+    );
+  }
+
+  if (job.status === "completed" && completion) {
+    return (
+      <div className="space-y-10">
+        <PageHeader
+          title="Audit Complete"
+          subtitle={`${job.audit?.strategyName ?? "Strategy"} analysis finished.`}
+          breadcrumbs={[
+            { label: "Dashboard", href: "/dashboard" },
+            { label: "New Audit", href: "/audit/new" },
+            { label: "Complete" },
+          ]}
+        />
+        <CompletionState result={completion} />
+      </div>
+    );
+  }
+
+  // ── Loading / queued / running ──────────────────────────
+
+  const steps = deriveRealSteps(job.status, job.progress);
+  const currentStepIndex = steps.findIndex((s) => s.status === "running");
+
+  const draftLike: AuditDraft = {
+    id: jobId,
+    strategyName: job.audit?.strategyName ?? "Strategy",
+    inputType: job.audit?.inputType ?? "paste",
+    fileName: job.audit?.fileName ?? null,
+    framework: job.audit?.framework ?? "auto",
+    analysisDepth: job.audit?.analysisDepth ?? "standard",
+    ruleCategories: job.audit?.ruleCategories ?? [],
+    code: "",
+    createdAt: job.audit?.createdAt ?? "",
+  };
+
+  const fwLabel =
+    FRAMEWORK_OPTIONS.find((f) => f.value === draftLike.framework)?.label ??
+    draftLike.framework;
+  const depthLabel =
+    ANALYSIS_DEPTH_OPTIONS.find((d) => d.value === draftLike.analysisDepth)
+      ?.label ?? draftLike.analysisDepth;
+
+  return (
+    <>
+      <div className="space-y-8">
+        {/* Header */}
+        <PageHeader
+          title="Analyzing Strategy"
+          subtitle="QuantLint is validating your strategy against its analysis pipeline."
+          breadcrumbs={[
+            { label: "Dashboard", href: "/dashboard" },
+            { label: "New Audit", href: "/audit/new" },
+            { label: "Running" },
+          ]}
+          actions={
+            <div className="flex items-center gap-3">
+              <StatusBadge
+                status={job.status === "loading" ? "queued" : job.status}
+              />
+            </div>
+          }
+        />
+
+        {/* Strategy name banner */}
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
+          <span className="font-semibold text-foreground">
+            {draftLike.strategyName}
+          </span>
+          <span className="text-muted-foreground">·</span>
+          <Badge variant="secondary" className="text-[10px] font-mono">
+            {fwLabel}
+          </Badge>
+          <Badge variant="secondary" className="text-[10px] font-mono">
+            {depthLabel}
+          </Badge>
+        </div>
+
+        {/* Two-column layout */}
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6">
+          {/* Main column */}
+          <div className="space-y-6">
+            {/* Progress */}
+            <Card className="border-border/40 bg-card/40">
+              <CardContent className="p-5">
+                <ProgressBar progress={job.progress} status={job.status} />
+              </CardContent>
+            </Card>
+
+            {/* Current analysis detail */}
+            <CurrentAnalysisDetail
+              steps={steps}
+              currentStepIndex={currentStepIndex}
+            />
+
+            {/* Pipeline */}
+            <Card className="border-border/40 bg-card/40">
+              <CardHeader className="p-4 pb-2">
+                <CardTitle className="text-xs font-mono uppercase tracking-wider text-muted-foreground">
+                  Analysis Pipeline
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-4 pt-0">
+                <Pipeline steps={steps} />
+              </CardContent>
+            </Card>
+
+            {/* Metrics — only real, persisted counts after completion */}
+            {completion && (
+              <MetricCounters
+                metrics={{
+                  rulesChecked: completion.rulesChecked,
+                  rulesPassed: completion.rulesPassed,
+                  warnings: completion.warnings,
+                  critical: completion.critical,
+                }}
+              />
+            )}
+
+            {/* Terminal */}
+            <TerminalLog logs={logs} />
+          </div>
+
+          {/* Right sidebar */}
+          <aside className="hidden lg:block">
+            <div className="sticky top-20 space-y-4">
+              <StrategyInfoCard draft={draftLike} />
+              <button
+                type="button"
+                onClick={() => setCancelOpen(true)}
+                className="w-full flex items-center justify-center gap-2 rounded-full border border-border/60 px-4 py-2 text-xs font-medium font-mono text-muted-foreground hover:text-foreground hover:border-border transition-all duration-150"
+              >
+                <X className="h-3.5 w-3.5" />
+                Cancel Audit
+              </button>
+            </div>
+          </aside>
+        </div>
+
+        {/* Mobile cancel */}
+        <div className="lg:hidden">
+          <StrategyInfoCard draft={draftLike} />
           <button
             type="button"
             onClick={() => setCancelOpen(true)}
