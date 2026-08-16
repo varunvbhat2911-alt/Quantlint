@@ -1,22 +1,16 @@
 import { createClient } from "@/lib/supabase/server";
-import { createAdminClient, isAdminClientConfigured } from "@/lib/supabase/admin";
 import type { AuditStatus } from "@/types/database";
 import type { AuditRow, CreateAuditInput } from "./types";
 
 /* Server-side data access for public.audits.
  *
- * While RLS is default-deny (pre-authentication), the API layer reaches the
- * tables through the service-role admin client; once user policies exist the
- * request-scoped session client can take over for user-context reads. */
+ * User-facing operations (Phase 4) run through the request-scoped session
+ * client so RLS enforces ownership as defense in depth: inserts carry the
+ * server-verified user id, and reads/selects only ever see rows the
+ * authenticated user owns. The service-role admin client is reserved for the
+ * internal audit executor (see src/lib/audit-engine/repository.ts). */
 
-type SupabaseDB = ReturnType<typeof createClient> | ReturnType<typeof createAdminClient>;
-
-async function db(): Promise<SupabaseDB> {
-  if (isAdminClientConfigured()) {
-    return createAdminClient();
-  }
-  // Falls back to the request-scoped client; writes/reads will be RLS-denied
-  // until policies exist, surfacing as clean 5xx responses.
+async function db() {
   return createClient();
 }
 
@@ -26,12 +20,15 @@ function dbError(context: string, message: string): Error {
 
 export async function createAudit(
   input: CreateAuditInput,
+  userId: string,
 ): Promise<AuditRow> {
   const supabase = await db();
 
   const { data, error } = await supabase
     .from("audits")
     .insert({
+      // Owner comes exclusively from the server-verified session.
+      user_id: userId,
       strategy_name: input.strategyName,
       input_type: input.inputType,
       file_name: input.fileName,

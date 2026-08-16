@@ -1,15 +1,22 @@
 import { createSupabaseAuditRepository } from "@/lib/audit-engine/repository";
 import { buildAuditResultData } from "@/lib/audits/result-mapper";
+import { requireUser } from "@/lib/auth/session";
+import { createClient } from "@/lib/supabase/server";
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-/* GET /api/audits/[id]/results — the completed audit's persisted findings,
- * metrics, recommendations, and timeline, shaped for the result page. */
+/* GET /api/audits/[id]/results — the AUTHENTICATED user's persisted
+ * findings, metrics, recommendations, timeline, and AI explanations.
+ * All reads run through the session client under RLS, so ownership
+ * (including child rows) is enforced database-side. */
 export async function GET(
   _request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  const { user, response: unauthorized } = await requireUser();
+  if (!user) return unauthorized;
+
   const { id } = await params;
 
   if (!UUID_RE.test(id)) {
@@ -19,7 +26,8 @@ export async function GET(
     );
   }
 
-  const repository = createSupabaseAuditRepository();
+  // Session-scoped repository: RLS filters both the audit and its children.
+  const repository = createSupabaseAuditRepository(await createClient());
 
   try {
     const audit = await repository.getAudit(id);

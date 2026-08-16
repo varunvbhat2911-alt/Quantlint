@@ -1,9 +1,14 @@
 import { NextRequest } from "next/server";
 import { createAudit, parseCreateAuditRequest } from "@/lib/audits";
+import { requireUser } from "@/lib/auth/session";
 
-/* POST /api/audits — create a queued audit job from AuditDraft-compatible
- * JSON. 201 with the new audit id, 400 on invalid input, 5xx on failure. */
+/* POST /api/audits — create a queued audit job for the AUTHENTICATED user.
+ * Ownership comes from the server-verified session; any user_id supplied by
+ * the browser is ignored (never read). 401 when unauthenticated. */
 export async function POST(request: NextRequest) {
+  const { user, response: unauthorized } = await requireUser();
+  if (!user) return unauthorized;
+
   let body: unknown;
   try {
     body = await request.json();
@@ -23,7 +28,7 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const audit = await createAudit(parsed.data);
+    const audit = await createAudit(parsed.data, user.id);
     return Response.json(
       {
         success: true,

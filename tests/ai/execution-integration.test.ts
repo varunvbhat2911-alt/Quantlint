@@ -78,6 +78,7 @@ class CapturingRepository implements AuditRepository {
   constructor(overrides: Partial<AuditRow> = {}) {
     this.row = {
       id: UUID,
+      user_id: "99999999-9999-4999-8999-999999999999",
       strategy_name: "AI Integration Test",
       input_type: "paste",
       file_name: null,

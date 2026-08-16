@@ -17,6 +17,7 @@ class InMemoryAuditRepository implements AuditRepository {
   constructor(overrides: Partial<AuditRow> = {}) {
     this.row = {
       id: "11111111-1111-4111-8111-111111111111",
+      user_id: "99999999-9999-4999-8999-999999999999",
       strategy_name: "Test Strategy",
       input_type: "paste",
       file_name: null,

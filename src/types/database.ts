@@ -56,6 +56,8 @@ export type Database = {
       audits: {
         Row: {
           id: string;
+          /* Owning authenticated user (auth.users.id) — server-set only. */
+          user_id: string;
           strategy_name: string;
           input_type: AuditInputType;
           file_name: string | null;
@@ -70,6 +72,7 @@ export type Database = {
         };
         Insert: {
           id?: string;
+          user_id: string;
           strategy_name: string;
           input_type: AuditInputType;
           file_name?: string | null;
@@ -84,6 +87,7 @@ export type Database = {
         };
         Update: {
           id?: string;
+          user_id?: string;
           strategy_name?: string;
           input_type?: AuditInputType;
           file_name?: string | null;

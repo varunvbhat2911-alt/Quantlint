@@ -1,20 +1,25 @@
+import { getAuditById, toAuditSummary } from "@/lib/audits";
 import { createSupabaseAuditRepository } from "@/lib/audit-engine/repository";
 import { runAudit } from "@/lib/audit-engine/execution";
-import { toAuditSummary } from "@/lib/audits";
+import { requireUser } from "@/lib/auth/session";
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-/* POST /api/audits/[id]/run — start server-side execution of a queued audit.
+/* POST /api/audits/[id]/run — start server-side execution of the
+ * AUTHENTICATED user's queued audit.
  *
- * Execution runs detached from the request so the polling endpoint can
- * observe real stage-by-stage progress; a future background worker replaces
- * this trigger without touching runAudit(). Safe on a long-running Next.js
- * server (next dev / next start); serverless deploys will need the queue. */
+ * Authorization first: the audit must be visible to this user through the
+ * session client (RLS-enforced). Only then does the internal executor run
+ * with the service-role repository — a deliberate internal operation after
+ * explicit authorization, not an authorization mechanism itself. */
 export async function POST(
   _request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  const { user, response: unauthorized } = await requireUser();
+  if (!user) return unauthorized;
+
   const { id } = await params;
 
   if (!UUID_RE.test(id)) {
@@ -24,11 +29,10 @@ export async function POST(
     );
   }
 
-  const repository = createSupabaseAuditRepository();
-
   let audit;
   try {
-    audit = await repository.getAudit(id);
+    // Session client + RLS: another user's audit reads as missing here.
+    audit = await getAuditById(id);
   } catch (err) {
     console.error("[api/audits/run] fetch failed:", err);
     return Response.json(
@@ -45,9 +49,9 @@ export async function POST(
   }
 
   if (audit.status === "queued") {
-    // Detached execution; errors are handled inside runAudit (failure state
-    // is persisted, never thrown to the client).
-    void runAudit(id, repository).catch((err) => {
+    // Internal execution after successful authorization; failures are
+    // persisted as a clean failed state, never thrown to the client.
+    void runAudit(id).catch((err) => {
       console.error("[api/audits/run] execution crashed:", err);
     });
     return Response.json(
@@ -59,6 +63,6 @@ export async function POST(
     );
   }
 
-  // Idempotent: already running, completed, or failed — report current state.
+  // Idempotent: already running, completed, or failed.
   return Response.json({ success: true, audit: toAuditSummary(audit) });
 }

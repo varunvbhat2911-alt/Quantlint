@@ -6,8 +6,14 @@
 
 import type { Database } from "@/types/database";
 import { createAdminClient, isAdminClientConfigured } from "@/lib/supabase/admin";
+import { createClient as createSessionClient } from "@/lib/supabase/server";
 
 type Tables = Database["public"]["Tables"];
+
+/* Any Supabase client bound to the Database types (session or admin). */
+type AnyDbClient =
+  | ReturnType<typeof createAdminClient>
+  | Awaited<ReturnType<typeof createSessionClient>>;
 
 export type AuditRow = Tables["audits"]["Row"];
 export type ViolationInsert = Tables["audit_violations"]["Insert"];
@@ -34,7 +40,16 @@ export interface AuditRepository {
   insertTimeline(rows: TimelineInsert[]): Promise<void>;
 }
 
-export function createSupabaseAuditRepository(): AuditRepository {
+/* Build a repository over an injected client.
+ *
+ * Default: the service-role admin client (used by the internal audit
+ * executor after the calling route has verified ownership). User-facing
+ * read paths pass the request-scoped session client so RLS enforces
+ * ownership at the database layer. */
+export function createSupabaseAuditRepository(client?: AnyDbClient): AuditRepository {
+  if (client) {
+    return buildRepository(client);
+  }
   if (!isAdminClientConfigured()) {
     // Fail fast with a clear message rather than issuing RLS-denied queries.
     const notConfigured = {
@@ -59,8 +74,10 @@ export function createSupabaseAuditRepository(): AuditRepository {
     return notConfigured;
   }
 
-  const db = createAdminClient();
+  return buildRepository(createAdminClient());
+}
 
+function buildRepository(db: AnyDbClient): AuditRepository {
   return {
     async getAudit(id) {
       const { data, error } = await db.from("audits").select().eq("id", id).maybeSingle();

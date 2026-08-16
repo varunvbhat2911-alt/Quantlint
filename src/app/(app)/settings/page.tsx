@@ -3,6 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import {
   ExternalLink,
   KeyRound,
@@ -14,6 +15,7 @@ import {
   EyeOff,
   Plus,
   Trash2,
+  LogOut,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { PageHeader } from "@/components/app/page-header";
@@ -51,6 +53,7 @@ const SETTINGS_NAV: SettingsNavItem[] = [
   { id: "notifications", label: "Notifications" },
   { id: "api-keys", label: "API Keys" },
   { id: "about", label: "About" },
+  { id: "account", label: "Account" },
   { id: "danger-zone", label: "Danger Zone" },
 ];
 
@@ -204,6 +207,42 @@ export default function SettingsPage() {
   const { showToast, toastElement } = useToast();
   const [activeSection, setActiveSection] = React.useState("appearance");
   const [resetDialogOpen, setResetDialogOpen] = React.useState(false);
+  const [accountEmail, setAccountEmail] = React.useState<string | null>(null);
+  const [signingOut, setSigningOut] = React.useState(false);
+  const router = useRouter();
+
+  React.useEffect(() => {
+    let cancelled = false;
+    void fetch("/api/auth/me")
+      .then(async (res) => {
+        if (!res.ok) return;
+        const payload: unknown = await res.json().catch(() => null);
+        const email =
+          typeof payload === "object" &&
+          payload !== null &&
+          "user" in payload
+            ? (payload as { user?: { email?: string | null } }).user?.email ?? null
+            : null;
+        if (!cancelled) setAccountEmail(email);
+      })
+      .catch(() => {
+        // Account section simply stays minimal on failure.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  async function handleSignOut() {
+    setSigningOut(true);
+    try {
+      await fetch("/api/auth/logout", { method: "POST" });
+      router.push("/auth/login");
+      router.refresh();
+    } finally {
+      setSigningOut(false);
+    }
+  }
 
   React.useEffect(() => {
     const sections = SETTINGS_NAV.map((item) => item.id);
@@ -642,6 +681,39 @@ export default function SettingsPage() {
                       GitHub
                       <ExternalLink className="h-3.5 w-3.5 text-muted-foreground" />
                     </a>
+                  </div>
+                </CardContent>
+              </Card>
+            </SettingsSection>
+
+            {/* Account */}
+            <SettingsSection
+              id="account"
+              title="Account"
+              description="Your QuantLint authentication session."
+            >
+              <Card className="border-border/40 bg-card/40">
+                <CardContent className="p-5">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div className="space-y-1">
+                      <p className="text-sm font-medium text-foreground">
+                        {accountEmail ?? "Signed in"}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {accountEmail
+                          ? "You are signed in with this email."
+                          : "Session information unavailable."}
+                      </p>
+                    </div>
+                    <SecondaryButton
+                      size="sm"
+                      className="text-xs"
+                      disabled={signingOut}
+                      onClick={handleSignOut}
+                    >
+                      <LogOut className="h-3.5 w-3.5" />
+                      {signingOut ? "Signing out…" : "Sign Out"}
+                    </SecondaryButton>
                   </div>
                 </CardContent>
               </Card>
