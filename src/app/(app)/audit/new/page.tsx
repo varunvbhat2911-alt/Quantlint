@@ -608,6 +608,102 @@ function Toast({
 }
 
 /* ────────────────────────────────────────────────────────── */
+/*  RUN AUDIT CTA                                             */
+/* ────────────────────────────────────────────────────────── */
+
+function RunAuditButton({
+  disabled,
+  submitting,
+  uploadProgress,
+  onClick,
+}: {
+  disabled: boolean;
+  submitting: boolean;
+  uploadProgress: number | null;
+  onClick: () => void;
+}) {
+  const uploading = uploadProgress !== null;
+  const label = uploading
+    ? `Uploading… ${Math.round(uploadProgress * 100)}%`
+    : submitting
+      ? "Starting…"
+      : "Run Audit";
+
+  return (
+    <div className="space-y-2">
+      <PrimaryButton
+        className="w-full"
+        disabled={disabled}
+        onClick={onClick}
+      >
+        {uploading ? (
+          <Upload className="h-4 w-4 animate-pulse" />
+        ) : (
+          <Play className="h-4 w-4" />
+        )}
+        {label}
+      </PrimaryButton>
+      {uploading && (
+        <div
+          className="h-1.5 w-full overflow-hidden rounded-full bg-secondary/60"
+          role="progressbar"
+          aria-valuenow={Math.round(uploadProgress * 100)}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-label="Upload progress"
+        >
+          <div
+            className="h-full rounded-full bg-foreground/70 transition-all duration-150"
+            style={{ width: `${Math.round(uploadProgress * 100)}%` }}
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ────────────────────────────────────────────────────────── */
+/*  UPLOAD TRANSPORT                                          */
+/* ────────────────────────────────────────────────────────── */
+
+/* POST multipart form data with real upload progress events (fetch cannot
+ * report request-body progress). Resolves with the parsed JSON response. */
+function postWithUploadProgress(
+  url: string,
+  form: FormData,
+  totalBytes: number,
+  onProgress: (fraction: number) => void,
+): Promise<{ status: number; payload: unknown }> {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", url);
+    xhr.responseType = "text";
+
+    if (totalBytes > 0) {
+      xhr.upload.onprogress = (e) => {
+        if (e.lengthComputable) {
+          onProgress(Math.min(1, e.loaded / e.total));
+        }
+      };
+    }
+
+    xhr.onload = () => {
+      let payload: unknown = null;
+      try {
+        payload = JSON.parse(xhr.responseText);
+      } catch {
+        // non-JSON error body
+      }
+      resolve({ status: xhr.status, payload });
+    };
+    xhr.onerror = () => reject(new Error("upload failed"));
+    xhr.onabort = () => reject(new Error("upload aborted"));
+
+    xhr.send(form);
+  });
+}
+
+/* ────────────────────────────────────────────────────────── */
 /*  MAIN PAGE                                                 */
 /* ────────────────────────────────────────────────────────── */
 
@@ -656,6 +752,10 @@ export default function NewAuditPage() {
 
   // Audit creation request in flight
   const [submitting, setSubmitting] = React.useState(false);
+  // Real upload progress (0–100) while the file streams to the server
+  const [uploadProgress, setUploadProgress] = React.useState<number | null>(
+    null,
+  );
 
   // Derived
   const hasUpload = inputMethod === "upload" && file !== null && !fileError;
@@ -705,7 +805,8 @@ export default function NewAuditPage() {
       return;
     }
 
-    // Build draft
+    // Build draft (upload drafts carry metadata only — file contents are
+    // streamed to the server, never placed in sessionStorage)
     const draft: AuditDraft = {
       id: createAuditDraftId(),
       strategyName: strategyName || "Untitled Strategy",
@@ -718,8 +819,6 @@ export default function NewAuditPage() {
       createdAt: new Date().toISOString(),
     };
 
-    // Still cached for the mock running page display; the real job is the
-    // database row created via POST /api/audits below.
     try {
       sessionStorage.setItem("quantlint_audit_draft", JSON.stringify(draft));
     } catch {
@@ -727,27 +826,47 @@ export default function NewAuditPage() {
     }
 
     setSubmitting(true);
+    setUploadProgress(inputMethod === "upload" ? 0 : null);
     try {
-      const res = await fetch("/api/audits", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          strategyName: draft.strategyName,
-          inputType: draft.inputType,
-          fileName: draft.fileName,
-          framework: draft.framework,
-          analysisDepth: draft.analysisDepth,
-          ruleCategories: draft.ruleCategories,
-          code: draft.code,
-        }),
-      });
+      let res: { status: number; payload: unknown };
 
-      let payload: unknown = null;
-      try {
-        payload = await res.json();
-      } catch {
-        // non-JSON error body
+      if (inputMethod === "upload" && file) {
+        // Real file upload: multipart with the actual bytes.
+        const form = new FormData();
+        form.set("strategyName", draft.strategyName);
+        form.set("fileName", file.name);
+        form.set("framework", framework);
+        form.set("analysisDepth", analysisDepth);
+        form.set("ruleCategories", JSON.stringify(ruleCategories));
+        form.set("file", file, file.name);
+        res = await postWithUploadProgress(
+          "/api/audits",
+          form,
+          file.size,
+          setUploadProgress,
+        );
+      } else {
+        // Pasted code — unchanged JSON flow.
+        const response = await fetch("/api/audits", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            strategyName: draft.strategyName,
+            inputType: draft.inputType,
+            fileName: draft.fileName,
+            framework: draft.framework,
+            analysisDepth: draft.analysisDepth,
+            ruleCategories: draft.ruleCategories,
+            code: draft.code,
+          }),
+        });
+        res = {
+          status: response.status,
+          payload: await response.json().catch(() => null),
+        };
       }
+
+      const payload = res.payload;
       const auditId =
         typeof payload === "object" &&
         payload !== null &&
@@ -757,7 +876,7 @@ export default function NewAuditPage() {
           ? (payload as { audit?: { id?: unknown } }).audit?.id
           : undefined;
 
-      if (!res.ok || typeof auditId !== "string") {
+      if (res.status >= 400 || typeof auditId !== "string") {
         const message =
           typeof payload === "object" &&
           payload !== null &&
@@ -779,6 +898,7 @@ export default function NewAuditPage() {
       });
     } finally {
       setSubmitting(false);
+      setUploadProgress(null);
     }
   }
 
@@ -880,14 +1000,12 @@ export default function NewAuditPage() {
                 inputType={inputMethod}
                 fileName={file?.name ?? null}
               />
-              <PrimaryButton
-                className="w-full"
+              <RunAuditButton
                 disabled={!hasInput || submitting}
+                submitting={submitting}
+                uploadProgress={uploadProgress}
                 onClick={handleRunAudit}
-              >
-                <Play className="h-4 w-4" />
-                Run Audit
-              </PrimaryButton>
+              />
             </div>
           </div>
 
@@ -903,14 +1021,12 @@ export default function NewAuditPage() {
                 inputType={inputMethod}
                 fileName={file?.name ?? null}
               />
-              <PrimaryButton
-                className="w-full"
+              <RunAuditButton
                 disabled={!hasInput || submitting}
+                submitting={submitting}
+                uploadProgress={uploadProgress}
                 onClick={handleRunAudit}
-              >
-                <Play className="h-4 w-4" />
-                Run Audit
-              </PrimaryButton>
+              />
               <p className="text-center text-[11px] text-muted-foreground">
                 No data leaves your browser.
               </p>

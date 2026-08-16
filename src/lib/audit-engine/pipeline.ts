@@ -24,6 +24,7 @@ import { rulesForStage } from "./rules/registry";
 import type { RuleContext, RuleFinding } from "./rules/types";
 import type { AIConfig, AIProvider, AIRecommendationData } from "@/lib/ai/types";
 import { runAIStage } from "@/lib/ai/service";
+import type { SourceSegment } from "@/lib/audit-ingestion/types";
 
 export class FatalAuditError extends Error {}
 
@@ -236,6 +237,7 @@ function buildContext(
     code: input.code,
     source,
     fileName: input.fileName,
+    segments: input.segments ?? [],
     framework: {
       declared: input.declaredFramework,
       detected,
@@ -243,6 +245,27 @@ function buildContext(
         input.declaredFramework === "auto" ? detected : input.declaredFramework,
     },
   };
+}
+
+/* Map an assembled-source line to the original file position. With no
+ * segments (paste, .py, single-file zip) lines already match the original.
+ * A line outside every segment (e.g., an assembly header) maps to null —
+ * locations are never fabricated. */
+export function mapFindingLocation(
+  line: number | null,
+  segments: readonly SourceSegment[] | undefined,
+  fallbackFileName: string | null,
+): { fileName: string | null; line: number | null } {
+  if (!segments || segments.length === 0 || line === null) {
+    return { fileName: fallbackFileName, line };
+  }
+  for (const segment of segments) {
+    const last = segment.startLine + segment.lineCount - 1;
+    if (line >= segment.startLine && line <= last) {
+      return { fileName: segment.path, line: line - segment.startLine + 1 };
+    }
+  }
+  return { fileName: null, line: null };
 }
 
 function runStageRules(
@@ -260,6 +283,7 @@ function runStageRules(
         stats.rulesPassed++;
       } else {
         for (const rf of ruleFindings) {
+          const location = mapFindingLocation(rf.line, ctx.segments, ctx.fileName);
           findings.push({
             ruleId: rule.ruleId,
             category: rule.category,
@@ -268,11 +292,11 @@ function runStageRules(
             description: rule.description,
             whyItMatters: rule.whyItMatters,
             suggestedFix: rule.suggestedFix,
-            fileName: ctx.fileName,
-            line: rf.line,
             detectedPattern: rf.detectedPattern,
             codeSnippet: rf.codeSnippet ?? null,
             fixSnippet: rule.fixSnippet ?? rf.fixSnippet ?? null,
+            fileName: location.fileName,
+            line: location.line,
           });
           if (rule.severity === "critical") stats.criticalCount++;
           else if (rule.severity === "warning") stats.warningCount++;

@@ -8,11 +8,15 @@ import type {
 } from "@/types/database";
 import type { AuditStage, FrameworkId } from "../types";
 import type { PythonStructure } from "../parsers/python";
+import type { SourceSegment } from "@/lib/audit-ingestion/types";
 
 export type RuleContext = {
   code: string;
   source: PythonStructure;
   fileName: string | null;
+  /* Multi-file assembly layout (empty for single-source inputs); used to
+   * report true original file/line positions on findings. */
+  segments: readonly SourceSegment[];
   framework: { declared: string; detected: FrameworkId; resolved: FrameworkId };
 };
 

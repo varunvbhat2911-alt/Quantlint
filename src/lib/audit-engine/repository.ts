@@ -32,7 +32,10 @@ export interface AuditRepository {
   getAudit(id: string): Promise<AuditRow | null>;
   /* Atomic queued→running claim; returns null when another runner claimed it. */
   claimAudit(id: string): Promise<AuditRow | null>;
-  updateAudit(id: string, patch: { status?: AuditRow["status"]; progress?: number }): Promise<AuditRow | null>;
+  updateAudit(
+    id: string,
+    patch: { status?: AuditRow["status"]; progress?: number; code?: string },
+  ): Promise<AuditRow | null>;
   getResults(auditId: string): Promise<AuditResults>;
   insertViolations(rows: ViolationInsert[]): Promise<void>;
   insertMetrics(rows: MetricInsert[]): Promise<void>;

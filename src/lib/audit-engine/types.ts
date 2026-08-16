@@ -16,6 +16,7 @@ import type {
   ViolationSeverity,
 } from "@/types/database";
 import type { AIExplanationData } from "@/lib/ai/types";
+import type { SourceSegment } from "@/lib/audit-ingestion/types";
 
 export const AUDIT_STAGES = [
   "intake",
@@ -98,6 +99,10 @@ export type EngineInput = {
   /* Categories selected on the audit form; empty means no category rules run
    * (matching the frontend contract where an empty selection is submittable). */
   ruleCategories: AuditRuleCategory[];
+  /* Multi-file inputs (ZIP uploads): where each original file starts inside
+   * the assembled `code` so findings report true file/line positions.
+   * Absent/empty for single-source inputs (paste, .py). */
+  segments?: SourceSegment[];
 };
 
 export type EngineFinding = {

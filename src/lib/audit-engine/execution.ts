@@ -17,6 +17,13 @@ import {
   type AuditRow,
   type TimelineInsert,
 } from "./repository";
+import {
+  IngestionError,
+  createStrategyStorageClient,
+  ingestUploadedStrategy,
+  type SourceSegment,
+  type StrategyStorageClient,
+} from "@/lib/audit-ingestion";
 
 export class AuditNotFoundError extends Error {
   constructor(id: string) {
@@ -34,6 +41,10 @@ export async function runAudit(
   auditId: string,
   repository: AuditRepository = createSupabaseAuditRepository(),
   aiDeps?: AIDeps | null,
+  /* Injectable for tests; resolved lazily to the service-role storage
+   * client only when an upload actually needs ingesting. The audit row was
+   * already authorization-checked by the calling route. */
+  storageClient?: StrategyStorageClient,
 ): Promise<RunAuditResult> {
   // AI enrichment is enabled only when FIREWORKS_API_KEY is configured;
   // otherwise the audit runs fully deterministic.
@@ -68,13 +79,62 @@ export async function runAudit(
   try {
     const aiStageIndex = AUDIT_STAGES.indexOf("ai");
     const perStage = 100 / AUDIT_STAGES.length;
+
+    /* Uploaded strategies ingest here: storage bytes → validated → decoded
+     * → normalized source (with per-file segments for ZIP projects). The
+     * normalized source is persisted so retries and the results page see
+     * exactly what the engine analyzed. Ingestion failures are clean
+     * user-facing errors — never internal stack traces. */
+    let code = audit.code;
+    let segments: SourceSegment[] | undefined;
+    if (audit.input_type === "upload") {
+      try {
+        const storage = storageClient ?? createStrategyStorageClient();
+        const ingested = await ingestUploadedStrategy(audit, storage);
+        code = ingested.code;
+        segments = ingested.segments.length > 0 ? ingested.segments : undefined;
+        if (code !== audit.code) {
+          await repository.updateAudit(auditId, { code });
+        }
+        const note =
+          ingested.encodingNote ?? `${ingested.fileCount} Python file(s) read`;
+        await repository.insertTimeline([
+          {
+            audit_id: auditId,
+            label: `Strategy file ingested — ${note}`,
+            entry_at: new Date().toISOString(),
+            sort_order: 0,
+          },
+        ]);
+      } catch (err) {
+        if (err instanceof IngestionError) {
+          console.error(`[runAudit] ingestion failed for ${auditId}: ${err.message}`);
+          await repository.insertTimeline([
+            ...startedTimeline,
+            {
+              audit_id: auditId,
+              label: `Audit failed: ${err.userMessage}`,
+              entry_at: new Date().toISOString(),
+              sort_order: 999,
+            },
+          ]);
+          const failed = await repository.updateAudit(auditId, {
+            status: "failed",
+          });
+          return { audit: failed ?? claimed, engine: null };
+        }
+        throw err;
+      }
+    }
+
     const result = await runEngine(
       {
-        code: audit.code,
+        code,
         fileName: audit.file_name,
         declaredFramework: audit.framework,
         analysisDepth: audit.analysis_depth,
         ruleCategories: audit.rule_categories,
+        segments,
       },
       {
         onStageComplete: (_stage, _index, progress) => {
