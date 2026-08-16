@@ -43,8 +43,9 @@ import {
   useAuditSimulation,
   type StepState,
 } from "@/hooks/use-audit-simulation";
-import type { StepStatus } from "@/lib/mock-data/audit-simulation";
 import { useAuditJob } from "@/hooks/use-audit-job";
+
+type StepStatus = "pending" | "running" | "completed" | "error";
 import { AUDIT_STAGES, STAGE_META } from "@/lib/audit-engine/types";
 import type { AuditSummary } from "@/lib/audits";
 

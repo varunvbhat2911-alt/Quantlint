@@ -51,6 +51,7 @@ export async function GET(
     const results = await repository.getResults(id);
     return Response.json({
       success: true,
+      audit: { id: audit.id, status: audit.status },
       result: buildAuditResultData(audit, results),
     });
   } catch (err) {

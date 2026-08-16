@@ -16,6 +16,7 @@ import {
   BarChart3,
   ShieldAlert,
   Zap,
+  Loader2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -26,18 +27,50 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { PrimaryButton } from "@/components/app/buttons";
+import { StatusBadge } from "@/components/app/badges";
 import { EmptyState } from "@/components/app/empty-state";
-import {
-  DASHBOARD_STATS,
-  RECENT_AUDITS,
-  RECENT_REPORTS,
-  RECENT_ACTIVITY,
-  QUICK_ACTIONS,
-  type DashboardStat,
-  type DashboardAudit,
-  type ActivityItem,
-  type QuickAction,
-} from "@/lib/mock-data/dashboard";
+import { formatDistanceToNow } from "date-fns";
+import { useAuditsList } from "@/hooks/use-audits-list";
+import type { AuditListItem } from "@/lib/audits/service";
+import type { AuditStats } from "@/lib/audits/service";
+
+/* Quick actions — static navigation links, not mock data. */
+type QuickAction = {
+  id: string;
+  title: string;
+  description: string;
+  href: string;
+};
+
+const QUICK_ACTIONS: QuickAction[] = [
+  {
+    id: "qa-new-audit",
+    title: "New Audit",
+    description: "Upload or paste a strategy for validation.",
+    href: "/audit/new",
+  },
+  {
+    id: "qa-history",
+    title: "View History",
+    description: "Review previous strategy audits.",
+    href: "/history",
+  },
+  {
+    id: "qa-docs",
+    title: "Documentation",
+    description: "Learn about QuantLint rules and validation.",
+    href: "/docs",
+  },
+];
+
+/* Real dashboard stat shape — values derived from the user's audits only. */
+type DashboardStat = {
+  label: string;
+  value: string;
+  trend: string;
+  trendDirection: "up" | "down" | "neutral";
+  supporting: string;
+};
 
 /* ────────────────────────────────────────────────────────── */
 /*  ICON HELPERS                                              */
@@ -54,27 +87,6 @@ const QUICK_ACTION_ICONS: Record<string, React.ElementType> = {
   "New Audit": PlusCircle,
   "View History": History,
   Documentation: BookOpen,
-};
-
-const STATUS_MAP: Record<
-  DashboardAudit["status"],
-  { label: string; className: string }
-> = {
-  Passed: {
-    label: "Passed",
-    className:
-      "bg-emerald-500/8 text-emerald-600 dark:text-emerald-400",
-  },
-  "Needs Review": {
-    label: "Needs Review",
-    className:
-      "bg-amber-500/8 text-amber-600 dark:text-amber-400",
-  },
-  Critical: {
-    label: "Critical",
-    className:
-      "bg-red-500/8 text-red-600 dark:text-red-400",
-  },
 };
 
 /* ────────────────────────────────────────────────────────── */
@@ -151,20 +163,6 @@ function QuickActionCard({ action }: { action: QuickAction }) {
   );
 }
 
-function AuditStatusBadge({ status }: { status: DashboardAudit["status"] }) {
-  const config = STATUS_MAP[status];
-  return (
-    <span
-      className={cn(
-        "inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] font-medium font-mono transition-colors",
-        config.className
-      )}
-    >
-      {config.label}
-    </span>
-  );
-}
-
 function ScoreIndicator({ score }: { score: number }) {
   const color =
     score >= 90
@@ -189,26 +187,6 @@ function ScoreIndicator({ score }: { score: number }) {
     >
       {score}/100
     </span>
-  );
-}
-
-function ActivityIcon({ type }: { type: ActivityItem["type"] }) {
-  const iconMap: Record<ActivityItem["type"], React.ElementType> = {
-    audit: CheckCircle2,
-    report: FileText,
-    flag: AlertTriangle,
-  };
-  const colorMap: Record<ActivityItem["type"], string> = {
-    audit: "text-emerald-500",
-    report: "text-muted-foreground",
-    flag: "text-amber-500",
-  };
-  const Icon = iconMap[type];
-
-  return (
-    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-border/60 bg-secondary/50">
-      <Icon className={cn("h-3 w-3", colorMap[type])} />
-    </div>
   );
 }
 
@@ -285,11 +263,44 @@ function QuickActionsSection() {
   );
 }
 
-function MetricsSection() {
+function MetricsSection({ stats }: { stats: AuditStats | null }) {
+  const cards: DashboardStat[] = stats
+    ? [
+        {
+          label: "Total Audits",
+          value: String(stats.total),
+          trend: "—",
+          trendDirection: "neutral",
+          supporting: "all runs",
+        },
+        {
+          label: "Completed",
+          value: String(stats.completed),
+          trend: "—",
+          trendDirection: "neutral",
+          supporting: "finished audits",
+        },
+        {
+          label: "Running",
+          value: String(stats.running + stats.queued),
+          trend: "—",
+          trendDirection: "neutral",
+          supporting: "in progress",
+        },
+        {
+          label: "Failed",
+          value: String(stats.failed),
+          trend: "—",
+          trendDirection: "neutral",
+          supporting: "failed runs",
+        },
+      ]
+    : [];
+
   return (
     <section aria-label="Key metrics">
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {DASHBOARD_STATS.map((stat) => (
+        {cards.map((stat) => (
           <StatCard key={stat.label} stat={stat} />
         ))}
       </div>
@@ -297,7 +308,13 @@ function MetricsSection() {
   );
 }
 
-function RecentAuditsSection() {
+function dashboardAuditHref(audit: Pick<AuditListItem, "id" | "status">): string {
+  return audit.status === "queued" || audit.status === "running"
+    ? `/audit/running?jobId=${encodeURIComponent(audit.id)}`
+    : `/audit/result?jobId=${encodeURIComponent(audit.id)}`;
+}
+
+function RecentAuditsSection({ audits }: { audits: AuditListItem[] }) {
   return (
     <section aria-label="Recent audits">
       <div className="flex items-center justify-between mb-5">
@@ -348,35 +365,41 @@ function RecentAuditsSection() {
               </tr>
             </thead>
             <tbody className="divide-y divide-border/40">
-              {RECENT_AUDITS.map((audit) => (
+              {audits.map((audit) => (
                 <tr
                   key={audit.id}
                   className="transition-colors hover:bg-card/60"
                 >
                   <td className="px-4 py-3 text-foreground font-medium">
-                    {audit.strategy}
+                    {audit.strategyName}
                   </td>
                   <td className="px-4 py-3 text-muted-foreground font-mono text-xs">
                     {audit.framework}
                   </td>
                   <td className="px-4 py-3">
-                    <ScoreIndicator score={audit.score} />
+                    {audit.score !== null ? (
+                      <ScoreIndicator score={audit.score} />
+                    ) : (
+                      <span className="text-muted-foreground font-mono">—</span>
+                    )}
                   </td>
                   <td className="px-4 py-3 text-muted-foreground font-mono tabular-nums">
-                    {audit.issues}
+                    {audit.violations.total}
                   </td>
                   <td className="px-4 py-3">
-                    <AuditStatusBadge status={audit.status} />
+                    <StatusBadge status={audit.status} />
                   </td>
-                  <td className="px-4 py-3 text-xs text-muted-foreground">
-                    {audit.date}
+                  <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">
+                    {formatDistanceToNow(new Date(audit.createdAt), {
+                      addSuffix: true,
+                    })}
                   </td>
                   <td className="px-4 py-3 text-right">
                     <Link
-                      href={`/report/${audit.reportId}`}
+                      href={dashboardAuditHref(audit)}
                       className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
                     >
-                      View Report
+                      Open
                       <ArrowRight className="h-3 w-3" />
                     </Link>
                   </td>
@@ -389,150 +412,44 @@ function RecentAuditsSection() {
 
       {/* Mobile card list */}
       <div className="md:hidden space-y-3">
-        {RECENT_AUDITS.map((audit) => (
-          <Link key={audit.id} href={`/report/${audit.reportId}`}>
+        {audits.map((audit) => (
+          <Link key={audit.id} href={dashboardAuditHref(audit)}>
             <Card className="border-border/40 bg-card/40 hover:bg-card hover:border-border/80 transition-all duration-200">
               <CardContent className="p-4 space-y-3">
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
                     <p className="text-sm font-medium text-foreground truncate">
-                      {audit.strategy}
+                      {audit.strategyName}
                     </p>
                     <p className="text-[11px] font-mono text-muted-foreground">
                       {audit.framework}
                     </p>
                   </div>
-                  <AuditStatusBadge status={audit.status} />
+                  <StatusBadge status={audit.status} />
                 </div>
                 <div className="flex items-center justify-between text-xs text-muted-foreground">
                   <div className="flex items-center gap-3">
-                    <ScoreIndicator score={audit.score} />
+                    {audit.score !== null ? (
+                      <ScoreIndicator score={audit.score} />
+                    ) : (
+                      <span className="font-mono">—</span>
+                    )}
                     <span className="font-mono tabular-nums">
-                      {audit.issues} issue{audit.issues !== 1 ? "s" : ""}
+                      {audit.violations.total} issue
+                      {audit.violations.total !== 1 ? "s" : ""}
                     </span>
                   </div>
-                  <span>{audit.date}</span>
+                  <span>
+                    {formatDistanceToNow(new Date(audit.createdAt), {
+                      addSuffix: true,
+                    })}
+                  </span>
                 </div>
               </CardContent>
             </Card>
           </Link>
         ))}
       </div>
-    </section>
-  );
-}
-
-function RecentReportsSection({
-  onDownloadClick,
-}: {
-  onDownloadClick: () => void;
-}) {
-  return (
-    <section aria-label="Recent reports">
-      <div className="flex items-center justify-between mb-5">
-        <div className="space-y-1">
-          <h2 className="text-base font-semibold tracking-tight text-foreground">
-            Recent Reports
-          </h2>
-          <p className="text-xs text-muted-foreground">
-            Generated analysis reports from your audits.
-          </p>
-        </div>
-      </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {RECENT_REPORTS.map((report) => (
-          <Card
-            key={report.id}
-            className="border-border/40 bg-card/40 hover:bg-card hover:border-border/80 transition-all duration-200 group"
-          >
-            <CardHeader className="p-5">
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex items-start gap-3 min-w-0">
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-border/60 bg-secondary/50 transition-colors group-hover:bg-secondary/80">
-                    <FileText className="h-4 w-4 text-muted-foreground" />
-                  </div>
-                  <div className="min-w-0 space-y-1">
-                    <CardTitle className="text-sm truncate">
-                      {report.title}
-                    </CardTitle>
-                    <CardDescription className="text-[11px] font-mono truncate">
-                      {report.strategy}
-                    </CardDescription>
-                  </div>
-                </div>
-                <ScoreIndicator score={report.score} />
-              </div>
-            </CardHeader>
-            <CardContent className="p-5 pt-0 flex items-center justify-between">
-              <span className="text-xs text-muted-foreground">
-                {report.date}
-              </span>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    onDownloadClick();
-                  }}
-                  className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
-                  aria-label={`Download ${report.title}`}
-                >
-                  <Download className="h-3 w-3" />
-                </button>
-                <Link
-                  href={`/report/${report.reportId}`}
-                  className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  View
-                  <ArrowRight className="h-3 w-3" />
-                </Link>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-    </section>
-  );
-}
-
-function ActivityFeedSection() {
-  return (
-    <section aria-label="Activity feed">
-      <div className="flex items-center justify-between mb-5">
-        <div className="space-y-1">
-          <h2 className="text-base font-semibold tracking-tight text-foreground">
-            Activity
-          </h2>
-          <p className="text-xs text-muted-foreground">
-            Recent events in your workspace.
-          </p>
-        </div>
-      </div>
-      <Card className="border-border/40 bg-card/40">
-        <CardContent className="p-0">
-          <ul className="divide-y divide-border/40">
-            {RECENT_ACTIVITY.map((item) => (
-              <li
-                key={item.id}
-                className="flex items-start gap-3 px-5 py-4 transition-colors hover:bg-card/60"
-              >
-                <ActivityIcon type={item.type} />
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium text-foreground">
-                    {item.title}
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-0.5 truncate">
-                    {item.description}
-                  </p>
-                </div>
-                <span className="text-[11px] text-muted-foreground shrink-0 mt-0.5 tabular-nums">
-                  {item.time}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </CardContent>
-      </Card>
     </section>
   );
 }
@@ -560,48 +477,72 @@ function DashboardEmptyState() {
 /* ────────────────────────────────────────────────────────── */
 
 export default function DashboardPage() {
-  const [toastVisible, setToastVisible] = React.useState(false);
+  // Real, authenticated data: recent audits + status statistics.
+  const { audits, loading, error } = useAuditsList({ pageSize: 5, sort: "newest" });
+  const [stats, setStats] = React.useState<AuditStats | null>(null);
+  const [statsLoading, setStatsLoading] = React.useState(true);
 
-  // Toggle this to see the empty state
-  const hasAudits = RECENT_AUDITS.length > 0;
-
-  const handleDownloadClick = React.useCallback(() => {
-    setToastVisible(true);
+  React.useEffect(() => {
+    let cancelled = false;
+    void fetch("/api/audits/stats", { cache: "no-store" })
+      .then(async (res) => {
+        if (!res.ok) return;
+        const payload: unknown = await res.json().catch(() => null);
+        if (
+          !cancelled &&
+          typeof payload === "object" &&
+          payload !== null &&
+          "stats" in payload
+        ) {
+          setStats((payload as { stats: AuditStats }).stats);
+        }
+      })
+      .catch(() => {
+        // Error state renders below; no mock fallback.
+      })
+      .finally(() => {
+        if (!cancelled) setStatsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
-  const handleToastClose = React.useCallback(() => {
-    setToastVisible(false);
-  }, []);
+  const hasAudits = (stats?.total ?? 0) > 0;
 
   return (
-    <>
-      <div className="space-y-10">
-        <DashboardHeader />
+    <div className="space-y-10">
+      <DashboardHeader />
 
-        {hasAudits ? (
-          <>
-            <QuickActionsSection />
-            <MetricsSection />
-            <RecentAuditsSection />
-            <div className="grid grid-cols-1 lg:grid-cols-5 gap-10">
-              <div className="lg:col-span-3">
-                <RecentReportsSection onDownloadClick={handleDownloadClick} />
-              </div>
-              <div className="lg:col-span-2">
-                <ActivityFeedSection />
-              </div>
-            </div>
-          </>
-        ) : (
-          <DashboardEmptyState />
-        )}
-      </div>
-
-      <ToastNotification
-        message="Report download will be available once report generation is connected."
-        visible={toastVisible}
-        onClose={handleToastClose}
-      />
-    </>
+      {statsLoading || loading ? (
+        <>
+          <QuickActionsSection />
+          <div className="flex items-center justify-center py-16 text-sm text-muted-foreground">
+            <Loader2 className="h-4 w-4 animate-spin mr-2" />
+            Loading your audits…
+          </div>
+        </>
+      ) : error ? (
+        <>
+          <QuickActionsSection />
+          <Card className="border-red-500/30 bg-card/60">
+            <CardContent className="p-8 text-center space-y-2">
+              <p className="text-sm font-medium text-foreground">
+                Could not load your audit data.
+              </p>
+              <p className="text-xs text-muted-foreground">{error}</p>
+            </CardContent>
+          </Card>
+        </>
+      ) : hasAudits ? (
+        <>
+          <QuickActionsSection />
+          <MetricsSection stats={stats} />
+          <RecentAuditsSection audits={audits} />
+        </>
+      ) : (
+        <DashboardEmptyState />
+      )}
+    </div>
   );
 }

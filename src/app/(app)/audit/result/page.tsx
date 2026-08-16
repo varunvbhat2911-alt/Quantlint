@@ -25,7 +25,7 @@ import {
   Circle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { PageHeader } from "@/components/app/page-header";
 import { PrimaryButton, SecondaryButton } from "@/components/app/buttons";
 import {
@@ -47,8 +47,6 @@ import {
   TabsIndicator,
 } from "@/components/tabs";
 import {
-  MOCK_AUDIT_RESULT,
-  buildExportJson,
   type AuditResultData,
   type Violation,
   type ViolationSeverity,
@@ -56,7 +54,8 @@ import {
   type AIExplanation,
   type Recommendation,
   type TimelineEntry,
-} from "@/lib/mock-data/audit-result";
+} from "@/lib/audit-result-types";
+import { buildExportJson } from "@/lib/audit-result-export";
 
 /* ────────────────────────────────────────────────────────── */
 /*  TOAST                                                     */
@@ -1139,8 +1138,8 @@ export default function AuditResultPage() {
 
 function AuditResultPageInner() {
   const searchParams = useSearchParams();
-  // Real audits arrive as ?jobId=<uuid>; without it the mock prototype data
-  // is shown (kept as the migration path from mock to real data).
+  const router = useRouter();
+  // Real audits arrive as ?jobId=<uuid>; without it, redirect to dashboard.
   const jobId = searchParams.get("jobId");
 
   const [toast, setToast] = React.useState<{
@@ -1148,12 +1147,11 @@ function AuditResultPageInner() {
     visible: boolean;
   }>({ message: "", visible: false });
 
-  const [result, setResult] = React.useState<AuditResultData | null>(
-    jobId ? null : MOCK_AUDIT_RESULT,
-  );
+  const [result, setResult] = React.useState<AuditResultData | null>(null);
   const [loadError, setLoadError] = React.useState<string | null>(null);
+  const [failedAudit, setFailedAudit] = React.useState<{ reason: string } | null>(null);
 
-  // Load the persisted result for a completed audit.
+  // Load the persisted result; route incomplete/failed audits correctly.
   React.useEffect(() => {
     if (!jobId) return;
     let cancelled = false;
@@ -1168,7 +1166,30 @@ function AuditResultPageInner() {
           payload !== null &&
           "result" in payload
         ) {
-          setResult((payload as { result: AuditResultData }).result);
+          const body = payload as {
+            result: AuditResultData;
+            audit?: { status?: string };
+          };
+          const status = body.audit?.status;
+          if (status === "queued" || status === "running") {
+            // Incomplete audits show the real progress experience.
+            router.replace(
+              `/audit/running?jobId=${encodeURIComponent(jobId)}`,
+            );
+            return;
+          }
+          if (status === "failed") {
+            const reason =
+              body.result.timeline
+                ?.slice()
+                .reverse()
+                .find((t) => /Audit failed/i.test(t.label))?.label ??
+              "The audit could not be completed.";
+            setFailedAudit({ reason });
+            setResult(body.result);
+            return;
+          }
+          setResult(body.result);
         } else {
           const message =
             typeof payload === "object" &&
@@ -1187,12 +1208,83 @@ function AuditResultPageInner() {
     return () => {
       cancelled = true;
     };
-  }, [jobId]);
+  }, [jobId, router]);
+
+  // No jobId provided — nothing to show, redirect to dashboard.
+  if (!jobId) {
+    return (
+      <div className="space-y-10">
+        <PageHeader
+          title="Audit Result Unavailable"
+          subtitle="No audit was specified."
+          breadcrumbs={[
+            { label: "Dashboard", href: "/dashboard" },
+            { label: "Audit Result" },
+          ]}
+        />
+        <EmptyState
+          icon={AlertTriangle}
+          title="No audit specified"
+          description="Navigate from the dashboard or history to view audit results."
+          action={
+            <PrimaryButton asChild>
+              <Link href="/dashboard">
+                Go to Dashboard
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+            </PrimaryButton>
+          }
+        />
+      </div>
+    );
+  }
 
   // Still loading a real result — render nothing rather than flashing the
   // not-found state.
-  if (jobId && !result && !loadError) {
+  if (!result && !loadError) {
     return null;
+  }
+
+  if (failedAudit) {
+    return (
+      <div className="space-y-10">
+        <PageHeader
+          title="Audit Failed"
+          subtitle="This strategy could not be analyzed."
+          breadcrumbs={[
+            { label: "Dashboard", href: "/dashboard" },
+            { label: "Audit History", href: "/history" },
+            { label: "Failed" },
+          ]}
+        />
+        <div className="text-center space-y-4 py-8">
+          <div className="flex justify-center">
+            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-red-500/10 border border-red-500/20">
+              <XCircle className="h-7 w-7 text-red-500 dark:text-red-400" />
+            </div>
+          </div>
+          <div className="space-y-2">
+            <h2 className="text-xl font-semibold text-foreground">
+              The audit could not be completed
+            </h2>
+            <p className="text-sm text-muted-foreground max-w-lg mx-auto">
+              {failedAudit.reason}
+            </p>
+          </div>
+          <div className="flex flex-col sm:flex-row items-center gap-3 justify-center">
+            <PrimaryButton asChild>
+              <Link href="/audit/new">
+                <RotateCcw className="h-4 w-4" />
+                Run Another Audit
+              </Link>
+            </PrimaryButton>
+            <SecondaryButton asChild>
+              <Link href="/history">Back to History</Link>
+            </SecondaryButton>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   if (loadError || !result) {
