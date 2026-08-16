@@ -7,7 +7,10 @@
  * logged server-side and surfaced to clients only as clean failure states. */
 
 import { runEngine } from "./engine";
-import type { EngineResult } from "./types";
+import { AUDIT_STAGES, type EngineResult } from "./types";
+import type { AIDeps } from "./pipeline";
+import { getAIProvider } from "@/lib/ai/provider";
+import type { Json } from "@/types/database";
 import {
   createSupabaseAuditRepository,
   type AuditRepository,
@@ -30,7 +33,11 @@ export type RunAuditResult = {
 export async function runAudit(
   auditId: string,
   repository: AuditRepository = createSupabaseAuditRepository(),
+  aiDeps?: AIDeps | null,
 ): Promise<RunAuditResult> {
+  // AI enrichment is enabled only when FIREWORKS_API_KEY is configured;
+  // otherwise the audit runs fully deterministic.
+  const ai = aiDeps !== undefined ? aiDeps : getAIProvider() ?? null;
   const audit = await repository.getAudit(auditId);
   if (!audit) throw new AuditNotFoundError(auditId);
 
@@ -59,7 +66,9 @@ export async function runAudit(
   ];
 
   try {
-    const result = runEngine(
+    const aiStageIndex = AUDIT_STAGES.indexOf("ai");
+    const perStage = 100 / AUDIT_STAGES.length;
+    const result = await runEngine(
       {
         code: audit.code,
         fileName: audit.file_name,
@@ -75,7 +84,17 @@ export async function runAudit(
             .updateAudit(auditId, { progress })
             .catch((err) => console.error(`[runAudit] progress write failed:`, err));
         },
+        onAIProgress: (fraction) => {
+          // Real sub-stage progress while the AI enriches findings.
+          const progress = Math.round(
+            aiStageIndex * perStage + perStage * Math.min(1, Math.max(0, fraction)),
+          );
+          repository
+            .updateAudit(auditId, { progress })
+            .catch((err) => console.error(`[runAudit] AI progress write failed:`, err));
+        },
       },
+      ai,
     );
 
     const timelineRows: TimelineInsert[] = [
@@ -117,6 +136,7 @@ export async function runAudit(
           fix_snippet: f.fixSnippet,
           status: "open",
           sort_order: i,
+          ai_explanation: (f.aiExplanation ?? null) as Json | null,
         })),
       ),
       repository.insertMetrics(

@@ -15,6 +15,7 @@ import type {
   FindingCategory,
   ViolationSeverity,
 } from "@/types/database";
+import type { AIExplanationData } from "@/lib/ai/types";
 
 export const AUDIT_STAGES = [
   "intake",
@@ -23,6 +24,7 @@ export const AUDIT_STAGES = [
   "rules",
   "risk",
   "performance",
+  "ai",
   "report",
 ] as const;
 
@@ -72,6 +74,12 @@ export const STAGE_META: Record<
     detail:
       "Checking metric computation, sample windows, and evaluation methodology.",
   },
+  ai: {
+    label: "AI Explanation",
+    description: "Enriching findings with AI explanations",
+    detail:
+      "Interpreting deterministic findings with the AI analysis assistant.",
+  },
   report: {
     label: "Report Generation",
     description: "Compiling findings into the audit report",
@@ -106,6 +114,10 @@ export type EngineFinding = {
   detectedPattern: string | null;
   codeSnippet: string | null;
   fixSnippet: string | null;
+  /* Phase 3: AI enrichment — set by the AI stage, persisted to
+   * audit_violations.ai_explanation. Enrichment only; deterministic fields
+   * above remain authoritative. */
+  aiExplanation?: AIExplanationData | null;
 };
 
 export type EngineMetricRow = {

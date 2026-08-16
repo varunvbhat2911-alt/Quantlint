@@ -22,14 +22,29 @@ import { parsePythonSource, type PythonStructure } from "./parsers/python";
 import { detectFramework } from "./parsers/framework";
 import { rulesForStage } from "./rules/registry";
 import type { RuleContext, RuleFinding } from "./rules/types";
+import type { AIConfig, AIProvider, AIRecommendationData } from "@/lib/ai/types";
+import { runAIStage } from "@/lib/ai/service";
 
 export class FatalAuditError extends Error {}
 
 export type PipelineHooks = {
   onStageComplete?: (stage: AuditStage, stageIndex: number, progress: number) => void;
+  /* Fine-grained progress within the AI stage: fraction 0..1. */
+  onAIProgress?: (fraction: number) => void;
 };
 
-export function runPipeline(input: EngineInput, hooks?: PipelineHooks): EngineResult {
+/* AI dependencies — injected so tests and future executors can substitute or
+ * omit the provider; the pipeline never constructs one itself. */
+export type AIDeps = {
+  provider: AIProvider;
+  config: AIConfig;
+};
+
+export async function runPipeline(
+  input: EngineInput,
+  hooks?: PipelineHooks,
+  aiDeps?: AIDeps | null,
+): Promise<EngineResult> {
   const timeline: EngineTimelineEntry[] = [];
   let timelineOrder = 0;
   const addTimeline = (label: string) => {
@@ -50,6 +65,7 @@ export function runPipeline(input: EngineInput, hooks?: PipelineHooks): EngineRe
   let parsed: PythonStructure | null = null;
   let detectedFramework: ReturnType<typeof detectFramework> = "unknown";
   let fatalError: string | null = null;
+  let aiRecommendations: AIRecommendationData[] = [];
 
   const total = AUDIT_STAGES.length;
   const selected = input.ruleCategories as readonly AuditRuleCategory[];
@@ -91,9 +107,48 @@ export function runPipeline(input: EngineInput, hooks?: PipelineHooks): EngineRe
           runStageRules(stage, ctx, selected, findings, stats);
           break;
         }
+        case "ai": {
+          // Enrichment only — deterministic findings stay authoritative and
+          // the audit survives any AI failure.
+          if (!aiDeps) {
+            addTimeline("AI enrichment unavailable — skipped");
+            break;
+          }
+          const resolved =
+            input.declaredFramework === "auto"
+              ? detectedFramework
+              : input.declaredFramework;
+          const aiResult = await runAIStage(
+            aiDeps.provider,
+            aiDeps.config,
+            findings,
+            {
+              strategyName: input.fileName ?? "Strategy",
+              framework: resolved,
+              analysisDepth: input.analysisDepth,
+            },
+            hooks?.onAIProgress,
+          );
+          if (aiResult.skipped) {
+            addTimeline(`AI enrichment skipped — ${aiResult.skipReason}`);
+            break;
+          }
+          for (const [findingIndex, explanation] of aiResult.explanations) {
+            findings[findingIndex] = {
+              ...findings[findingIndex],
+              aiExplanation: explanation,
+            };
+          }
+          aiRecommendations = aiResult.recommendations;
+          addTimeline(
+            aiResult.explanations.size === 0 && aiResult.failed > 0
+              ? `AI enrichment failed — deterministic findings preserved (${aiResult.failed} attempts)`
+              : `AI enrichment completed — ${aiResult.explanations.size} explained, ${aiResult.failed} failed`,
+          );
+          break;
+        }
         case "report": {
-          // Findings are already collected; metrics/score are assembled in
-          // finalizeResult by the engine wrapper.
+          // Deterministic report assembly happens in finalizeResult.
           break;
         }
       }
@@ -115,7 +170,9 @@ export function runPipeline(input: EngineInput, hooks?: PipelineHooks): EngineRe
       completedAt,
       error: stageError,
     });
-    addTimeline(`${STAGE_LABEL[stage]} completed`);
+    if (stage !== "ai") {
+      addTimeline(`${STAGE_LABEL[stage]} completed`);
+    }
 
     const progress = Math.round(((index + 1) / total) * 100);
     hooks?.onStageComplete?.(stage, index, progress);
@@ -145,7 +202,16 @@ export function runPipeline(input: EngineInput, hooks?: PipelineHooks): EngineRe
     };
   }
 
-  return finalizeResult(input, parsed!, detectedFramework, findings, stats, timeline, stageResults);
+  return finalizeResult(
+    input,
+    parsed!,
+    detectedFramework,
+    findings,
+    stats,
+    timeline,
+    stageResults,
+    aiRecommendations,
+  );
 }
 
 /* ── Internals ─────────────────────────────────────────────── */
@@ -157,6 +223,7 @@ const STAGE_LABEL: Record<AuditStage, string> = {
   rules: "Rule analysis",
   risk: "Risk analysis",
   performance: "Performance analysis",
+  ai: "AI enrichment",
   report: "Report generation",
 };
 
@@ -227,12 +294,26 @@ function finalizeResult(
   stats: EngineStats,
   timeline: EngineTimelineEntry[],
   stageResults: StageResult[],
+  aiRecommendations: AIRecommendationData[],
 ): EngineResult {
   const resolved =
     input.declaredFramework === "auto" ? detected : input.declaredFramework;
 
   const metrics: EngineMetricRow[] = buildMetricRows(parsed, findings, stats);
   const recommendations: EngineRecommendation[] = buildRecommendations(findings);
+
+  // AI recommendations continue after the deterministic ones (priority
+  // offset), all grounded in real rule ids by validation.
+  for (const ai of aiRecommendations) {
+    recommendations.push({
+      priority: recommendations.length + ai.priority,
+      title: ai.title,
+      severity: ai.severity,
+      why: ai.why,
+      suggestedAction: ai.suggestedAction,
+      relatedRuleId: ai.relatedRuleId,
+    });
+  }
   const score = computeScore(stats);
   const { grade, gradeStatus } = computeGrade(score);
 

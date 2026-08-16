@@ -52,6 +52,34 @@ export function buildAuditResultData(
     status: v.status as Violation["status"],
   }));
 
+  // AI explanations persisted on violations (Phase 3) — mapped into the
+  // frontend AIExplanation shape for the dedicated AI tab.
+  const aiExplanations: AIExplanation[] = results.violations
+    .filter((v) => v.ai_explanation !== null && typeof v.ai_explanation === "object")
+    .map((v) => {
+      const ai = v.ai_explanation as {
+        ruleId?: string;
+        finding?: string;
+        explanation?: string;
+        whyItMatters?: string;
+        suggestedFix?: string;
+        confidence?: number;
+      };
+      return {
+        id: `ai-${v.id}`,
+        ruleId: ai.ruleId ?? v.rule_id,
+        finding: ai.finding ?? v.title,
+        explanation: ai.explanation ?? "",
+        whyItMatters: ai.whyItMatters ?? "",
+        suggestedFix: ai.suggestedFix ?? "",
+        /* AI self-assessment (0..1), qualitative only — never a probability
+         * of strategy success (3O). */
+        confidence: Math.round(Math.min(1, Math.max(0, Number(ai.confidence) || 0)) * 100),
+        relatedViolationId: v.id,
+      };
+    })
+    .filter((ex) => ex.explanation.length > 0);
+
   // Regroup flat metric rows into the MetricGroup shape the UI renders.
   const groups = new Map<string, MetricGroup>();
   for (const m of results.metrics) {
@@ -123,7 +151,7 @@ export function buildAuditResultData(
     critical,
     violations,
     metricGroups: [...groups.values()],
-    aiExplanations: [] as AIExplanation[],
+    aiExplanations,
     recommendations,
     timeline,
     ruleCoverage: [],

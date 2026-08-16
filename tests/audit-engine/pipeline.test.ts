@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 import { runEngine } from "@/lib/audit-engine/engine";
 import { AUDIT_STAGES, type EngineInput } from "@/lib/audit-engine/types";
 
@@ -24,15 +24,19 @@ print(portfolio.stats())
 `;
 
 describe("runPipeline success path", () => {
-  const result = runEngine({
-    code: VALID,
-    fileName: "strategy.py",
-    declaredFramework: "auto",
-    analysisDepth: "standard",
-    ruleCategories: ALL_CATEGORIES,
+  let result: Awaited<ReturnType<typeof runEngine>>;
+
+  beforeAll(async () => {
+    result = await runEngine({
+      code: VALID,
+      fileName: "strategy.py",
+      declaredFramework: "auto",
+      analysisDepth: "standard",
+      ruleCategories: ALL_CATEGORIES,
+    });
   });
 
-  it("completes all seven stages", () => {
+  it("completes all stages (deterministic + AI slot + report)", () => {
     expect(result.ok).toBe(true);
     expect(result.stageResults.map((s) => s.stage)).toEqual([...AUDIT_STAGES]);
     expect(result.stageResults.every((s) => s.ok)).toBe(true);
@@ -78,8 +82,8 @@ describe("runPipeline success path", () => {
 });
 
 describe("runPipeline failure path", () => {
-  it("fails cleanly on malformed Python", () => {
-    const result = runEngine({
+  it("fails cleanly on malformed Python", async () => {
+    const result = await runEngine({
       code: "def broken(:\n    x = (1 + 2\n",
       fileName: "bad.py",
       declaredFramework: "auto",
@@ -92,8 +96,8 @@ describe("runPipeline failure path", () => {
     expect(result.timeline.some((t) => t.label.startsWith("Audit failed"))).toBe(true);
   });
 
-  it("fails cleanly on empty source", () => {
-    const result = runEngine({
+  it("fails cleanly on empty source", async () => {
+    const result = await runEngine({
       code: "   \n\t\n",
       fileName: null,
       declaredFramework: "auto",
@@ -104,8 +108,8 @@ describe("runPipeline failure path", () => {
     expect(result.fatalError).toMatch(/empty/i);
   });
 
-  it("never reports fabricated line numbers — null when unknown", () => {
-    const result = runEngine({
+  it("never reports fabricated line numbers — null when unknown", async () => {
+    const result = await runEngine({
       code: "import vectorbt as vbt\nportfolio = vbt.Portfolio.from_signals(close=price)\n",
       fileName: "x.py",
       declaredFramework: "auto",
