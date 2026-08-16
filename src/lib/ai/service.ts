@@ -153,6 +153,66 @@ function strArray(value: unknown): string[] {
     .slice(0, 6);
 }
 
+/* ── Hallucination defense (7F/7G) ───────────────────────────
+ *
+ * No performance statistics are ever computed by the audit, so ANY numeric
+ * performance figure in model output is fabricated. Conceptual mentions
+ * ("consider the Sharpe ratio") stay allowed; only co-occurrence of a
+ * metric term with a measured-looking number within a short window is
+ * rejected. Two number classes keep source quoting safe:
+ * - RATIO metrics (Sharpe, volatility, …) are claimed as bare decimals
+ *   ("a Sharpe of 1.8"), so decimals OR %/x markers are flagged.
+ * - PERFORMANCE terms (returns, profit, win rate, …) are claimed with %/x
+ *   markers ("15% returns", "2x profit"); a bare decimal after "return" is
+ *   usually quoted source code ("return signal * 20.0") and is allowed. */
+const RATIO_TERMS = [
+  "sharpe",
+  "sortino",
+  "cagr",
+  "drawdown",
+  "volatility",
+  "\\balpha\\b",
+  "\\bbeta\\b",
+  "expectancy",
+];
+
+const PERFORMANCE_TERMS = [
+  "\\breturn\\b",
+  "\\breturns\\b",
+  "\\bprofit\\b",
+  "profitability",
+  "win rate",
+  "win-rate",
+  "winrate",
+  "hit rate",
+  "annualized",
+  "annualised",
+  "trades per",
+  "trade count",
+];
+
+const RATIO_NUMBER = "(\\d+\\.\\d+|\\d+\\s*[%x×])";
+const PERFORMANCE_NUMBER = "(\\d+\\s*[%x×]|\\d+(?:\\.\\d+)?\\s*%)";
+
+const CLAIM_PATTERNS: RegExp[] = [];
+for (const term of RATIO_TERMS) {
+  CLAIM_PATTERNS.push(
+    new RegExp(`${term}[^\\d\\n]{0,30}${RATIO_NUMBER}`, "i"),
+    new RegExp(`${RATIO_NUMBER}[^\\n]{0,20}${term}`, "i"),
+  );
+}
+for (const term of PERFORMANCE_TERMS) {
+  CLAIM_PATTERNS.push(
+    new RegExp(`${term}[^\\d\\n]{0,30}${PERFORMANCE_NUMBER}`, "i"),
+    new RegExp(`${PERFORMANCE_NUMBER}[^\\n]{0,20}${term}`, "i"),
+  );
+}
+
+export function containsUnsupportedPerformanceClaim(...texts: string[]): boolean {
+  const joined = texts.filter(Boolean).join(" \n ");
+  return CLAIM_PATTERNS.some((re) => re.test(joined));
+}
+
 export function validateExplanation(
   payload: unknown,
   finding: EngineFinding,
@@ -165,6 +225,20 @@ export function validateExplanation(
   const whyItMatters = str(p.why_it_matters);
   const suggestedFix = str(p.suggested_fix);
   if (!explanation || !whyItMatters || !suggestedFix) return null;
+
+  /* Fabricated performance figures invalidate the whole explanation: the
+   * finding keeps its deterministic fields, this AI text is omitted (7F). */
+  if (
+    containsUnsupportedPerformanceClaim(
+      explanation,
+      whyItMatters,
+      suggestedFix,
+      str(p.summary) ?? "",
+      str(p.corrected_example) ?? "",
+    )
+  ) {
+    return null;
+  }
 
   const confidenceNumber = Number(p.confidence);
   if (!Number.isFinite(confidenceNumber)) return null;
@@ -214,6 +288,7 @@ export function validateRecommendations(
     const suggestedAction = str(r.suggested_action);
     if (!relatedRuleId || !validRuleIds.has(relatedRuleId)) continue;
     if (!title || !why || !suggestedAction) continue;
+    if (containsUnsupportedPerformanceClaim(title, why, suggestedAction)) continue;
 
     const severity = severityByRule.get(relatedRuleId) ?? "info";
     const priority = Math.min(20, Math.max(1, Math.round(Number(r.priority) || 5)));

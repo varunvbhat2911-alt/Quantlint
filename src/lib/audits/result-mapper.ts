@@ -1,18 +1,34 @@
 /* Maps persisted audit rows into the frontend AuditResultData contract
- * (src/lib/mock-data/audit-result.ts), so the result page renders real data
- * without any UI changes. Pure functions — usable server- and client-side. */
+ * (src/lib/audit-result-types.ts). Deterministic columns are authoritative:
+ * AI content is carried alongside, never merged into rule fields. Pure
+ * functions — usable server- and client-side. */
 
 import type {
   AIExplanation,
   AuditResultData,
+  EvidenceKind,
   MetricGroup,
   Recommendation,
   TimelineEntry,
   Violation,
-  ViolationSeverity,
-} from "@/lib/mock-data/audit-result";
+} from "@/lib/audit-result-types";
 import { computeGrade, computeScore, RULES_VERSION, type EngineStats } from "@/lib/audit-engine/types";
 import type { AuditRepository, AuditRow } from "@/lib/audit-engine/repository";
+
+/* Deterministically classify how a persisted finding was grounded. The
+ * engine's shape decides — AI output is never consulted:
+ * - a code snippet means a real source line anchored the match → direct
+ * - a pattern without a line means an absence-based check → absence
+ * - anything else (structural inference) → inferred */
+function evidenceKindOf(v: {
+  code_snippet: string | null;
+  line: number | null;
+  detected_pattern: string | null;
+}): EvidenceKind {
+  if (v.code_snippet !== null && v.code_snippet.trim().length > 0) return "direct";
+  if (v.line === null && v.detected_pattern !== null) return "absence";
+  return "inferred";
+}
 
 function severityCounts(violations: { severity: string }[]): EngineStats {
   const stats: EngineStats = {
@@ -50,35 +66,72 @@ export function buildAuditResultData(
     codeSnippet: v.code_snippet,
     fixSnippet: v.fix_snippet,
     status: v.status as Violation["status"],
+    evidence: evidenceKindOf(v),
   }));
 
   // AI explanations persisted on violations (Phase 3) — mapped into the
-  // frontend AIExplanation shape for the dedicated AI tab.
-  const aiExplanations: AIExplanation[] = results.violations
-    .filter((v) => v.ai_explanation !== null && typeof v.ai_explanation === "object")
-    .map((v) => {
-      const ai = v.ai_explanation as {
-        ruleId?: string;
-        finding?: string;
-        explanation?: string;
-        whyItMatters?: string;
-        suggestedFix?: string;
-        confidence?: number;
-      };
-      return {
-        id: `ai-${v.id}`,
-        ruleId: ai.ruleId ?? v.rule_id,
-        finding: ai.finding ?? v.title,
-        explanation: ai.explanation ?? "",
-        whyItMatters: ai.whyItMatters ?? "",
-        suggestedFix: ai.suggestedFix ?? "",
-        /* AI self-assessment (0..1), qualitative only — never a probability
-         * of strategy success (3O). */
-        confidence: Math.round(Math.min(1, Math.max(0, Number(ai.confidence) || 0)) * 100),
-        relatedViolationId: v.id,
-      };
-    })
-    .filter((ex) => ex.explanation.length > 0);
+  // frontend AIExplanation shape. DETERMINISTIC COLUMNS WIN on any overlap:
+  // the violation's own ruleId/title are authoritative; the persisted AI
+  // payload only contributes its interpretive fields. Records written before
+  // Phase 7 (no caveats/evidenceLevel) map with those fields absent.
+  const aiExplanations: AIExplanation[] = [];
+  const aiByViolation = new Map<string, AIExplanation>();
+  for (const v of results.violations) {
+    if (v.ai_explanation === null || typeof v.ai_explanation !== "object") continue;
+    const ai = v.ai_explanation as {
+      ruleId?: string;
+      finding?: string;
+      summary?: string;
+      explanation?: string;
+      whyItMatters?: string;
+      suggestedFix?: string;
+      confidence?: number;
+      evidenceLevel?: string;
+      caveats?: unknown;
+      assumptions?: unknown;
+      correctedExample?: string | null;
+      model?: string;
+    };
+    if (typeof ai.explanation !== "string" || ai.explanation.trim().length === 0) continue;
+
+    const explanation: AIExplanation = {
+      id: `ai-${v.id}`,
+      ruleId: v.rule_id,
+      finding: v.title,
+      explanation: ai.explanation,
+      whyItMatters: typeof ai.whyItMatters === "string" ? ai.whyItMatters : "",
+      suggestedFix: typeof ai.suggestedFix === "string" ? ai.suggestedFix : "",
+      /* AI self-assessment (0..1), qualitative only — never a probability
+       * of strategy success (3O). */
+      confidence: Math.round(Math.min(1, Math.max(0, Number(ai.confidence) || 0)) * 100),
+      relatedViolationId: v.id,
+    };
+    if (Array.isArray(ai.caveats)) {
+      explanation.caveats = ai.caveats.filter((c): c is string => typeof c === "string" && c.trim().length > 0);
+    }
+    if (Array.isArray(ai.assumptions)) {
+      explanation.assumptions = ai.assumptions.filter((c): c is string => typeof c === "string" && c.trim().length > 0);
+    }
+    if (ai.evidenceLevel === "definite" || ai.evidenceLevel === "likely" || ai.evidenceLevel === "uncertain") {
+      explanation.evidenceLevel = ai.evidenceLevel;
+    }
+    if (typeof ai.correctedExample === "string") {
+      explanation.correctedExample = ai.correctedExample;
+    }
+    if (typeof ai.model === "string" && ai.model.trim().length > 0) {
+      explanation.model = ai.model;
+    }
+
+    aiExplanations.push(explanation);
+    aiByViolation.set(v.id, explanation);
+  }
+
+  // Link each explanation onto its finding for inline display (Phase 7L) —
+  // the violation object itself stays deterministic; the AI payload rides
+  // along in a clearly-labeled field.
+  for (const violation of violations) {
+    violation.aiExplanation = aiByViolation.get(violation.id) ?? null;
+  }
 
   // Regroup flat metric rows into the MetricGroup shape the UI renders.
   const groups = new Map<string, MetricGroup>();
@@ -113,8 +166,14 @@ export function buildAuditResultData(
   const rulesExecuted = results.metrics.find((m) => m.key === "rules-executed");
   const rulesPassed = results.metrics.find((m) => m.key === "rules-passed");
 
-  const score = computeScore(stats);
-  const { grade, gradeStatus } = computeGrade(score);
+  /* Failed audits never receive a score computed from "whatever was
+   * persisted before the failure" — that would fabricate a clean grade for
+   * an audit that did not finish (7M). Mirrors the engine's fatal path. */
+  const failed = audit.status === "failed";
+  const score = failed ? 0 : computeScore(stats);
+  const { grade, gradeStatus } = failed
+    ? { grade: "F", gradeStatus: "Audit failed — no score computed" }
+    : computeGrade(score);
 
   const critical = stats.criticalCount;
   const warning = stats.warningCount;

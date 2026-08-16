@@ -19,6 +19,13 @@ export type FindingCategory =
   | "performance"
   | "structure";
 
+/* How the deterministic engine grounded this finding (Phase 7C):
+ * - direct:    evidence is a matched line of the submitted source (snippet)
+ * - inferred:  structural/derived evidence without a single anchor line
+ * - absence:   finding triggered because an expected safeguard was NOT
+ *              detected in the submitted source (never proof of behavior) */
+export type EvidenceKind = "direct" | "inferred" | "absence";
+
 export type Violation = {
   id: string;
   ruleId: string;
@@ -34,6 +41,11 @@ export type Violation = {
   codeSnippet: string | null;
   fixSnippet: string | null;
   status: ViolationStatus;
+  /* Deterministically derived at map time from the finding's shape. */
+  evidence?: EvidenceKind;
+  /* The AI explanation for THIS finding, when one was validated and
+   * persisted. Interpretive only — never part of the rule result. */
+  aiExplanation?: AIExplanation | null;
 };
 
 export type MetricGroup = {
@@ -55,6 +67,13 @@ export type AIExplanation = {
   suggestedFix: string;
   confidence: number;
   relatedViolationId: string;
+  /* Optional enrichment fields (Phase 7). Older persisted AI records lack
+   * them — consumers must treat absence as "not provided". */
+  caveats?: string[];
+  assumptions?: string[];
+  evidenceLevel?: "definite" | "likely" | "uncertain";
+  correctedExample?: string | null;
+  model?: string;
 };
 
 export type Recommendation = {
