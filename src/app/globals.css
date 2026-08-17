@@ -135,6 +135,11 @@ body {
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  /* Safe area support for notched devices */
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
 }
 
 :root {
@@ -255,6 +260,52 @@ html.quantlint-compact .sm\:py-10 {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+  }
+}
+
+/* ── Mobile touch target improvements ─────────────────────── */
+
+/* Ensure interactive elements meet 44x44px minimum on touch devices */
+@media (pointer: coarse) {
+  button,
+  [role="button"],
+  a,
+  input[type="button"],
+  input[type="submit"],
+  input[type="reset"],
+  select {
+    min-height: 44px;
+  }
+
+  /* Navbar mobile menu button */
+  button[aria-label="Toggle menu"] {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  /* Sidebar links */
+  nav a {
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+  }
+}
+
+/* ── Prevent horizontal overflow on mobile ────────────────── */
+
+@media (max-width: 640px) {
+  /* Ensure code blocks and tables scroll horizontally */
+  pre,
+  code,
+  table {
+    max-width: 100%;
+    overflow-x: auto;
+  }
+
+  /* Prevent page-level horizontal scroll */
+  html,
+  body {
+    overflow-x: hidden;
   }
 }
 
