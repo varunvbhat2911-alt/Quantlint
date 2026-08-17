@@ -126,6 +126,23 @@ class CapturingRepository implements AuditRepository {
   async insertTimeline(rows: TimelineInsert[]) {
     this.timeline.push(...rows);
   }
+  async commitResults(args: {
+    violations: ViolationInsert[];
+    metrics: MetricInsert[];
+    recommendations: RecommendationInsert[];
+    timeline: TimelineInsert[];
+  }) {
+    this.violations.push(...args.violations);
+    this.metrics.push(...args.metrics);
+    this.recommendations.push(...args.recommendations);
+    this.timeline.push(...args.timeline);
+  }
+  async recoverStale(): Promise<string[]> {
+    return [];
+  }
+  async resetForRetry(): Promise<boolean> {
+    return false;
+  }
 }
 
 const aiDeps = (provider: AIProvider): AIDeps => ({ provider, config: CONFIG });

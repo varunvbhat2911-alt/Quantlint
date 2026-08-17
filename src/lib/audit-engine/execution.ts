@@ -178,53 +178,51 @@ export async function runAudit(
       return { audit: failed ?? claimed, engine: result };
     }
 
-    await Promise.all([
-      repository.insertViolations(
-        result.findings.map((f, i) => ({
-          audit_id: auditId,
-          rule_id: f.ruleId,
-          severity: f.severity,
-          category: f.category,
-          title: f.title,
-          description: f.description,
-          why_it_matters: f.whyItMatters,
-          file_name: f.fileName,
-          line: f.line,
-          detected_pattern: f.detectedPattern,
-          suggested_fix: f.suggestedFix,
-          code_snippet: f.codeSnippet,
-          fix_snippet: f.fixSnippet,
-          status: "open",
-          sort_order: i,
-          ai_explanation: (f.aiExplanation ?? null) as Json | null,
-        })),
-      ),
-      repository.insertMetrics(
-        result.metrics.map((m, i) => ({
-          audit_id: auditId,
-          group_label: m.groupLabel,
-          key: m.key,
-          label: m.label,
-          value: m.value,
-          tooltip: m.tooltip,
-          sort_order: i,
-        })),
-      ),
-      repository.insertRecommendations(
-        result.recommendations.map((r, i) => ({
-          audit_id: auditId,
-          priority: r.priority,
-          title: r.title,
-          severity: r.severity,
-          why: r.why,
-          suggested_action: r.suggestedAction,
-          related_rule_id: r.relatedRuleId,
-          status: "open",
-          sort_order: i,
-        })),
-      ),
-      repository.insertTimeline(timelineRows),
-    ]);
+    // Phase 8: atomic persistence — all children + status in one transaction.
+    await repository.commitResults({
+      auditId,
+      status: "completed",
+      progress: 100,
+      violations: result.findings.map((f, i) => ({
+        audit_id: auditId,
+        rule_id: f.ruleId,
+        severity: f.severity,
+        category: f.category,
+        title: f.title,
+        description: f.description,
+        why_it_matters: f.whyItMatters,
+        file_name: f.fileName,
+        line: f.line,
+        detected_pattern: f.detectedPattern,
+        suggested_fix: f.suggestedFix,
+        code_snippet: f.codeSnippet,
+        fix_snippet: f.fixSnippet,
+        status: "open",
+        sort_order: i,
+        ai_explanation: (f.aiExplanation ?? null) as Json | null,
+      })),
+      metrics: result.metrics.map((m, i) => ({
+        audit_id: auditId,
+        group_label: m.groupLabel,
+        key: m.key,
+        label: m.label,
+        value: m.value,
+        tooltip: m.tooltip,
+        sort_order: i,
+      })),
+      recommendations: result.recommendations.map((r, i) => ({
+        audit_id: auditId,
+        priority: r.priority,
+        title: r.title,
+        severity: r.severity,
+        why: r.why,
+        suggested_action: r.suggestedAction,
+        related_rule_id: r.relatedRuleId,
+        status: "open",
+        sort_order: i,
+      })),
+      timeline: timelineRows,
+    });
 
     const completed = await repository.updateAudit(auditId, {
       status: "completed",

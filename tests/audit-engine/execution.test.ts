@@ -78,6 +78,26 @@ class InMemoryAuditRepository implements AuditRepository {
   async insertTimeline(rows: unknown[]) {
     this.inserts.push({ table: "audit_timeline", count: rows.length });
   }
+
+  async commitResults(args: {
+    violations: unknown[];
+    metrics: unknown[];
+    recommendations: unknown[];
+    timeline: unknown[];
+  }) {
+    this.inserts.push({ table: "audit_violations", count: args.violations.length });
+    this.inserts.push({ table: "audit_metrics", count: args.metrics.length });
+    this.inserts.push({ table: "audit_recommendations", count: args.recommendations.length });
+    this.inserts.push({ table: "audit_timeline", count: args.timeline.length });
+  }
+
+  async recoverStale(): Promise<string[]> {
+    return [];
+  }
+
+  async resetForRetry(): Promise<boolean> {
+    return false;
+  }
 }
 
 const UUID = "11111111-1111-4111-8111-111111111111";

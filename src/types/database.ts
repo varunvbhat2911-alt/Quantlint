@@ -308,7 +308,30 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
-      [_ in never]: never;
+      commit_audit_results: {
+        Args: {
+          p_audit_id: string;
+          p_status: string;
+          p_progress: number;
+          p_violations: Json;
+          p_metrics: Json;
+          p_recommendations: Json;
+          p_timeline: Json;
+        };
+        Returns: undefined;
+      };
+      recover_stale_audits: {
+        Args: {
+          p_stale_after_minutes: number;
+        };
+        Returns: string[];
+      };
+      reset_audit_for_retry: {
+        Args: {
+          p_audit_id: string;
+        };
+        Returns: boolean;
+      };
     };
     Enums: {
       [_ in never]: never;

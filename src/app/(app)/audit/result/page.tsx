@@ -23,6 +23,7 @@ import {
   ArrowRight,
   ExternalLink,
   Circle,
+  Loader2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useSearchParams, useRouter } from "next/navigation";
@@ -1297,6 +1298,24 @@ function AuditResultPageInner() {
   const [result, setResult] = React.useState<AuditResultData | null>(null);
   const [loadError, setLoadError] = React.useState<string | null>(null);
   const [failedAudit, setFailedAudit] = React.useState<{ reason: string } | null>(null);
+  const [retrying, setRetrying] = React.useState(false);
+
+  async function handleRetry() {
+    if (!jobId || retrying) return;
+    setRetrying(true);
+    try {
+      const res = await fetch(`/api/audits/${jobId}/run`, { method: "POST" });
+      if (res.ok) {
+        router.push(`/audit/running?jobId=${encodeURIComponent(jobId)}`);
+      } else {
+        setToast({ message: "Could not retry the audit.", visible: true });
+      }
+    } catch {
+      setToast({ message: "Network error — could not retry.", visible: true });
+    } finally {
+      setRetrying(false);
+    }
+  }
 
   // Load the persisted result; route incomplete/failed audits correctly.
   React.useEffect(() => {
@@ -1419,12 +1438,25 @@ function AuditResultPageInner() {
             </p>
           </div>
           <div className="flex flex-col sm:flex-row items-center gap-3 justify-center">
-            <PrimaryButton asChild>
-              <Link href="/audit/new">
-                <RotateCcw className="h-4 w-4" />
-                Run Another Audit
-              </Link>
+            <PrimaryButton
+              disabled={retrying}
+              onClick={handleRetry}
+            >
+              {retrying ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Retrying…
+                </>
+              ) : (
+                <>
+                  <RotateCcw className="h-4 w-4" />
+                  Retry This Audit
+                </>
+              )}
             </PrimaryButton>
+            <SecondaryButton asChild>
+              <Link href="/audit/new">Run Another Audit</Link>
+            </SecondaryButton>
             <SecondaryButton asChild>
               <Link href="/history">Back to History</Link>
             </SecondaryButton>

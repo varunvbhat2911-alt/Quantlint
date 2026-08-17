@@ -247,6 +247,11 @@ function buildContext(
   };
 }
 
+/* Phase 8 #3: per-rule finding fan-out limit. Prevents a pathological source
+ * from generating thousands of violation rows from a single rule. Applied
+ * per rule, not globally — different rules' findings are not combined. */
+const MAX_FINDINGS_PER_RULE = 50;
+
 /* Map an assembled-source line to the original file position. With no
  * segments (paste, .py, single-file zip) lines already match the original.
  * A line outside every segment (e.g., an assembly header) maps to null —
@@ -282,7 +287,7 @@ function runStageRules(
       if (ruleFindings.length === 0) {
         stats.rulesPassed++;
       } else {
-        for (const rf of ruleFindings) {
+        for (const rf of ruleFindings.slice(0, MAX_FINDINGS_PER_RULE)) {
           const location = mapFindingLocation(rf.line, ctx.segments, ctx.fileName);
           findings.push({
             ruleId: rule.ruleId,

@@ -4,7 +4,7 @@
  * implementation and a future background worker can swap the Supabase one
  * without touching the engine. */
 
-import type { Database } from "@/types/database";
+import type { Database, Json } from "@/types/database";
 import { createAdminClient, isAdminClientConfigured } from "@/lib/supabase/admin";
 import { createClient as createSessionClient } from "@/lib/supabase/server";
 
@@ -41,6 +41,23 @@ export interface AuditRepository {
   insertMetrics(rows: MetricInsert[]): Promise<void>;
   insertRecommendations(rows: RecommendationInsert[]): Promise<void>;
   insertTimeline(rows: TimelineInsert[]): Promise<void>;
+  /* Phase 8: atomic result persistence — all children + status update in
+   * one Postgres transaction (commit_audit_results RPC). */
+  commitResults(args: {
+    auditId: string;
+    status: AuditRow["status"];
+    progress: number;
+    violations: ViolationInsert[];
+    metrics: MetricInsert[];
+    recommendations: RecommendationInsert[];
+    timeline: TimelineInsert[];
+  }): Promise<void>;
+  /* Phase 8: atomically mark stale running audits as failed with a timeline
+   * entry. Returns the recovered audit IDs (for logging only). */
+  recoverStale(staleAfterMinutes?: number): Promise<string[]>;
+  /* Phase 8: atomically delete children + reset to queued for retry.
+   * Returns false if the audit is not in 'failed' state. */
+  resetForRetry(auditId: string): Promise<boolean>;
 }
 
 /* Build a repository over an injected client.
@@ -73,6 +90,13 @@ export function createSupabaseAuditRepository(client?: AnyDbClient): AuditReposi
       insertMetrics: async () => undefined,
       insertRecommendations: async () => undefined,
       insertTimeline: async () => undefined,
+      commitResults: async () => {
+        throw new Error(
+          "Audit persistence is unavailable: SUPABASE_SERVICE_ROLE_KEY is not configured.",
+        );
+      },
+      recoverStale: async () => [],
+      resetForRetry: async () => false,
     };
     return notConfigured;
   }
@@ -101,12 +125,13 @@ function buildRepository(db: AnyDbClient): AuditRepository {
     },
 
     async updateAudit(id, patch) {
-      const { data, error } = await db
-        .from("audits")
-        .update(patch)
-        .eq("id", id)
-        .select()
-        .maybeSingle();
+      let query = db.from("audits").update(patch).eq("id", id);
+      // Monotonic progress guard: only advance, never regress (Phase 8 #5).
+      // Status-only updates (no progress in the patch) bypass the guard.
+      if (patch.progress !== undefined) {
+        query = query.lte("progress", patch.progress);
+      }
+      const { data, error } = await query.select().maybeSingle();
       if (error) throw new Error(`[audits] update failed: ${error.message}`);
       return data;
     },
@@ -151,6 +176,46 @@ function buildRepository(db: AnyDbClient): AuditRepository {
       if (rows.length === 0) return;
       const { error } = await db.from("audit_timeline").insert(rows);
       if (error) throw new Error(`[audits] timeline insert failed: ${error.message}`);
+    },
+
+    async commitResults(args) {
+      // Postgres jsonb_array_elements needs actual jsonb values, not text.
+      // supabase-js serializes objects to JSON in the RPC body, so passing
+      // the arrays directly (as plain JS arrays) makes Postgres receive them
+      // as jsonb — stringify would produce a text scalar that
+      // jsonb_array_elements cannot iterate.
+      const { error } = await db.rpc("commit_audit_results", {
+        p_audit_id: args.auditId,
+        p_status: args.status,
+        p_progress: args.progress,
+        p_violations: args.violations as unknown as Json,
+        p_metrics: args.metrics as unknown as Json,
+        p_recommendations: args.recommendations as unknown as Json,
+        p_timeline: args.timeline as unknown as Json,
+      });
+      if (error) {
+        throw new Error(`[audits] commit_results failed: ${error.message}`);
+      }
+    },
+
+    async recoverStale(staleAfterMinutes = 10) {
+      const { data, error } = await db.rpc("recover_stale_audits", {
+        p_stale_after_minutes: staleAfterMinutes,
+      });
+      if (error) {
+        throw new Error(`[audits] recover_stale failed: ${error.message}`);
+      }
+      return (data ?? []) as string[];
+    },
+
+    async resetForRetry(auditId) {
+      const { data, error } = await db.rpc("reset_audit_for_retry", {
+        p_audit_id: auditId,
+      });
+      if (error) {
+        throw new Error(`[audits] reset_for_retry failed: ${error.message}`);
+      }
+      return (data as boolean) ?? false;
     },
   };
 }
