@@ -2,6 +2,7 @@ import { createSupabaseAuditRepository } from "@/lib/audit-engine/repository";
 import { buildAuditResultData } from "@/lib/audits/result-mapper";
 import { requireUser } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
+import { log } from "@/lib/server/logger";
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -55,7 +56,7 @@ export async function GET(
       result: buildAuditResultData(audit, results),
     });
   } catch (err) {
-    console.error("[api/audits/results] failed:", err);
+    log.error("api.audits.results.failed", { auditId: id, error: String(err) });
     return Response.json(
       { success: false, error: "Failed to load audit results." },
       { status: 500 },

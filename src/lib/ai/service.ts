@@ -22,6 +22,7 @@ import {
   buildRecommendationsMessages,
   type FindingPromptContext,
 } from "./prompts";
+import { log } from "@/lib/server/logger";
 
 export type EnrichProgress = (fraction: number) => void;
 
@@ -314,5 +315,5 @@ function logAIError(context: string, err: unknown) {
       : err instanceof Error
         ? err.message
         : "unknown error";
-  console.error(`[ai] ${context} failed: ${detail}`);
+  log.error("ai.enrichment.failed", { context, error: detail });
 }

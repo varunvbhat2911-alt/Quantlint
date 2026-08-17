@@ -24,6 +24,7 @@ import {
   type SourceSegment,
   type StrategyStorageClient,
 } from "@/lib/audit-ingestion";
+import { log } from "@/lib/server/logger";
 
 export class AuditNotFoundError extends Error {
   constructor(id: string) {
@@ -108,7 +109,7 @@ export async function runAudit(
         ]);
       } catch (err) {
         if (err instanceof IngestionError) {
-          console.error(`[runAudit] ingestion failed for ${auditId}: ${err.message}`);
+          log.error("audit.ingestion.failed", { auditId, error: err.message });
           await repository.insertTimeline([
             ...startedTimeline,
             {
@@ -142,7 +143,7 @@ export async function runAudit(
           // write failure must not abort the audit.
           repository
             .updateAudit(auditId, { progress })
-            .catch((err) => console.error(`[runAudit] progress write failed:`, err));
+            .catch((err) => log.error("audit.progress.write.failed", { auditId, error: String(err) }));
         },
         onAIProgress: (fraction) => {
           // Real sub-stage progress while the AI enriches findings.
@@ -151,7 +152,7 @@ export async function runAudit(
           );
           repository
             .updateAudit(auditId, { progress })
-            .catch((err) => console.error(`[runAudit] AI progress write failed:`, err));
+            .catch((err) => log.error("audit.ai.progress.write.failed", { auditId, error: String(err) }));
         },
       },
       ai,
@@ -174,7 +175,7 @@ export async function runAudit(
       const failed = await repository.updateAudit(auditId, {
         status: "failed",
       });
-      console.error(`[runAudit] audit ${auditId} failed: ${result.fatalError}`);
+      log.error("audit.execution.failed", { auditId, error: result.fatalError });
       return { audit: failed ?? claimed, engine: result };
     }
 
@@ -231,7 +232,7 @@ export async function runAudit(
     return { audit: completed ?? claimed, engine: result };
   } catch (err) {
     // Fatal infrastructure/engine error → clean failure state.
-    console.error(`[runAudit] audit ${auditId} crashed:`, err);
+    log.error("audit.crashed", { auditId, error: String(err) });
     const message =
       err instanceof Error && /SUPABASE_SERVICE_ROLE_KEY|insert failed|update failed/
         ? "Audit persistence failed."
@@ -251,7 +252,7 @@ export async function runAudit(
       });
       return { audit: failed ?? claimed, engine: null };
     } catch (persistErr) {
-      console.error(`[runAudit] failure-state persistence error:`, persistErr);
+      log.error("audit.failure.persistence.error", { auditId, error: String(persistErr) });
       return { audit: claimed, engine: null };
     }
   }

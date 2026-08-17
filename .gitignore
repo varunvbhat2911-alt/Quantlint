@@ -48,3 +48,6 @@ next-env.d.ts
 supabase/functions/audit-worker/_worker.bundle.js
 scripts/phase9/_worker.node.bundle.js
 node_modules/.phase9-shims/
+
+# Supabase CLI metadata
+supabase/.temp/
