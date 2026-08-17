@@ -1,3 +1,4 @@
+import { NextRequest } from "next/server";
 import { toAuditSummary, getAuditById, deleteAudit } from "@/lib/audits";
 import { requireUser } from "@/lib/auth/session";
 import {
@@ -5,6 +6,8 @@ import {
   deleteStrategyFile,
   strategyPathForAudit,
 } from "@/lib/audit-ingestion";
+import { log } from "@/lib/server/logger";
+import { requestIdFrom, withRequestId } from "@/lib/server/request";
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -19,20 +22,24 @@ const UUID_RE =
  * database delete succeeds but the storage delete fails, the row is gone
  * and the orphaned object is inert — its path is no longer derivable from
  * any audit; the failure is logged server-side and the delete still
- * succeeds (documented behavior). */
+ * succeeds (documented behavior). Storage cleanup is idempotent. */
 export async function DELETE(
-  _request: Request,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { user, response: unauthorized } = await requireUser();
   if (!user) return unauthorized;
+  const requestId = requestIdFrom(request);
 
   const { id } = await params;
 
   if (!UUID_RE.test(id)) {
-    return Response.json(
-      { success: false, error: "Invalid audit id." },
-      { status: 400 },
+    return withRequestId(
+      Response.json(
+        { success: false, error: "Invalid audit id." },
+        { status: 400 },
+      ),
+      requestId,
     );
   }
 
@@ -40,9 +47,12 @@ export async function DELETE(
     /* Fetch first (RLS-scoped): foreign/unknown audits 404 before storage. */
     const audit = await getAuditById(id);
     if (!audit) {
-      return Response.json(
-        { success: false, error: "Audit not found." },
-        { status: 404 },
+      return withRequestId(
+        Response.json(
+          { success: false, error: "Audit not found." },
+          { status: 404 },
+        ),
+        requestId,
       );
     }
 
@@ -50,9 +60,12 @@ export async function DELETE(
 
     const deleted = await deleteAudit(id);
     if (!deleted) {
-      return Response.json(
-        { success: false, error: "Audit not found." },
-        { status: 404 },
+      return withRequestId(
+        Response.json(
+          { success: false, error: "Audit not found." },
+          { status: 404 },
+        ),
+        requestId,
       );
     }
 
@@ -62,18 +75,30 @@ export async function DELETE(
         storagePath,
       );
       if (!removal.ok) {
-        console.error(
-          `[api/audits] storage cleanup failed for ${storagePath}: ${removal.error}`,
-        );
+        log.warn("api.audits.storage_cleanup_failed", {
+          requestId,
+          auditId: id,
+          errorCode: "STORAGE_CLEANUP_WARNING",
+          error: removal.error ?? "unknown",
+        });
       }
     }
 
-    return Response.json({ success: true });
+    log.info("api.audits.deleted", { requestId, auditId: id, userId: user.id });
+    return withRequestId(Response.json({ success: true }), requestId);
   } catch (err) {
-    console.error("[api/audits] delete failed:", err);
-    return Response.json(
-      { success: false, error: "Failed to delete the audit." },
-      { status: 500 },
+    log.error("api.audits.delete_failed", {
+      requestId,
+      auditId: id,
+      errorCode: "AUDIT_DELETE_ERROR",
+      ...errField(err),
+    });
+    return withRequestId(
+      Response.json(
+        { success: false, error: "Failed to delete the audit." },
+        { status: 500 },
+      ),
+      requestId,
     );
   }
 }
@@ -82,18 +107,22 @@ export async function DELETE(
  * the session client under RLS, so another user's audit is indistinguishable
  * from a missing one (same safe 404). */
 export async function GET(
-  _request: Request,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { user, response: unauthorized } = await requireUser();
   if (!user) return unauthorized;
+  const requestId = requestIdFrom(request);
 
   const { id } = await params;
 
   if (!UUID_RE.test(id)) {
-    return Response.json(
-      { success: false, error: "Invalid audit id." },
-      { status: 400 },
+    return withRequestId(
+      Response.json(
+        { success: false, error: "Invalid audit id." },
+        { status: 400 },
+      ),
+      requestId,
     );
   }
 
@@ -101,19 +130,37 @@ export async function GET(
   try {
     audit = await getAuditById(id);
   } catch (err) {
-    console.error("[api/audits] fetch failed:", err);
-    return Response.json(
-      { success: false, error: "Failed to fetch the audit." },
-      { status: 500 },
+    log.error("api.audits.fetch_failed", {
+      requestId,
+      auditId: id,
+      errorCode: "AUDIT_FETCH_ERROR",
+      ...errField(err),
+    });
+    return withRequestId(
+      Response.json(
+        { success: false, error: "Failed to fetch the audit." },
+        { status: 500 },
+      ),
+      requestId,
     );
   }
 
   if (!audit) {
-    return Response.json(
-      { success: false, error: "Audit not found." },
-      { status: 404 },
+    return withRequestId(
+      Response.json(
+        { success: false, error: "Audit not found." },
+        { status: 404 },
+      ),
+      requestId,
     );
   }
 
-  return Response.json({ success: true, audit: toAuditSummary(audit) });
+  return withRequestId(
+    Response.json({ success: true, audit: toAuditSummary(audit) }),
+    requestId,
+  );
+}
+
+function errField(err: unknown): { error: string } {
+  return { error: err instanceof Error ? err.message : "unknown error" };
 }

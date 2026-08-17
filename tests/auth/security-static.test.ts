@@ -22,7 +22,9 @@ const srcFiles = walk(SRC).map((f) => path.relative(ROOT, f).replace(/\\/g, "/")
 
 /* Modules allowed to touch (or name, in server-only error strings) the
  * server-only credential env vars. All are imported exclusively by
- * Route Handlers / server code — never from client components. */
+ * Route Handlers / server code — never from client components. The health/
+ * readiness route references the env-var NAME only for a boolean presence
+ * check (never reads the value). */
 const SERVER_ONLY_ALLOWLIST = [
   "src/lib/supabase/admin.ts",
   "src/lib/ai/provider.ts",
@@ -30,6 +32,8 @@ const SERVER_ONLY_ALLOWLIST = [
   "src/lib/ai/service.ts",
   "src/lib/audit-engine/execution.ts",
   "src/lib/audit-engine/repository.ts",
+  "src/lib/audit-queue/index.ts",
+  "src/app/api/health/ready/route.ts",
 ];
 
 describe("static security", () => {

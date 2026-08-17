@@ -18,6 +18,8 @@ export {
   uploadStrategyFile,
   downloadStrategyFile,
   deleteStrategyFile,
+  deleteUserStorage,
   type StrategyStorageClient,
+  type StorageSweepResult,
 } from "./storage";
 export { ingestUploadedStrategy, type IngestedStrategy } from "./service";

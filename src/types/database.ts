@@ -303,6 +303,58 @@ export type Database = {
           },
         ];
       };
+      /* Phase 9: durable execution queue. RLS enabled, no policies →
+       * service-role only. Payloads hold only the audit id. */
+      audit_job_queue: {
+        Row: {
+          id: string;
+          audit_id: string;
+          status: "pending" | "running" | "completed" | "dead";
+          attempts: number;
+          max_attempts: number;
+          visible_at: string;
+          locked_by: string | null;
+          locked_at: string | null;
+          last_error: string | null;
+          enqueued_at: string;
+          completed_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          audit_id: string;
+          status?: "pending" | "running" | "completed" | "dead";
+          attempts?: number;
+          max_attempts?: number;
+          visible_at?: string;
+          locked_by?: string | null;
+          locked_at?: string | null;
+          last_error?: string | null;
+          enqueued_at?: string;
+          completed_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          audit_id?: string;
+          status?: "pending" | "running" | "completed" | "dead";
+          attempts?: number;
+          max_attempts?: number;
+          visible_at?: string;
+          locked_by?: string | null;
+          locked_at?: string | null;
+          last_error?: string | null;
+          enqueued_at?: string;
+          completed_at?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "audit_job_queue_audit_id_fkey";
+            columns: ["audit_id"];
+            isOneToOne: false;
+            referencedRelation: "audits";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
     };
     Views: {
       [_ in never]: never;
@@ -331,6 +383,44 @@ export type Database = {
           p_audit_id: string;
         };
         Returns: boolean;
+      };
+      enqueue_audit: {
+        Args: { p_audit_id: string };
+        Returns: boolean;
+      };
+      dequeue_audit: {
+        Args: { p_worker_id: string; p_max_attempts: number };
+        Returns: { job_id: string; audit_id: string; attempts: number }[];
+      };
+      complete_audit_job: {
+        Args: { p_job_id: string };
+        Returns: undefined;
+      };
+      fail_audit_job: {
+        Args: {
+          p_job_id: string;
+          p_error: string;
+          p_retry_delay_seconds: number;
+        };
+        Returns: undefined;
+      };
+      recover_stale_jobs: {
+        Args: { p_stale_after_seconds: number };
+        Returns: string[];
+      };
+      audit_status_counts: {
+        Args: Record<string, never>;
+        Returns: { status: string; count: number }[];
+      };
+      audit_list_summary: {
+        Args: Record<string, never>;
+        Returns: {
+          total_audits: number;
+          total_issues: number;
+          critical_findings: number;
+          scored_count: number;
+          score_sum: number;
+        }[];
       };
     };
     Enums: {

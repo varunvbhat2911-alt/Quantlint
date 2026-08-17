@@ -45,6 +45,9 @@ function fakeStorage(initial: Record<string, Uint8Array> = {}) {
           async remove() {
             return { data: [], error: null };
           },
+          async list() {
+            return { data: [], error: null };
+          },
         };
       },
     },
@@ -102,6 +105,9 @@ describe("ingestUploadedStrategy", () => {
               return { data: null, error: { message: "should not download" } };
             },
             async remove() {
+              return { data: [], error: null };
+            },
+            async list() {
               return { data: [], error: null };
             },
           };

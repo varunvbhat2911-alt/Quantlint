@@ -15,6 +15,7 @@
  * supabase/migrations/20260816190000_create_strategy_files_storage.sql).
  * ──────────────────────────────────────────────────────────── */
 
+import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sanitizeFileName } from "./validation";
 import { IngestionError, STORAGE_BUCKET } from "./types";
@@ -35,6 +36,10 @@ export type StrategyStorageClient = {
       remove(
         paths: string[],
       ): Promise<{ data: unknown; error: { message: string } | null }>;
+      list(
+        prefix?: string,
+        options?: { limit?: number; offset?: number; search?: string },
+      ): Promise<{ data: { name: string }[] | null; error: { message: string } | null }>;
     };
   };
 };
@@ -117,4 +122,78 @@ export async function deleteStrategyFile(
   const { error } = await client.storage.from(STORAGE_BUCKET).remove([path]);
   if (error) return { ok: false, error: error.message };
   return { ok: true };
+}
+
+/* ── User-prefix cleanup (account deletion) ─────────────────
+ *
+ * When a user is deleted, auth.users CASCADE removes their audits + children,
+ * but storage objects are NOT cascaded (no FK possible). This sweeps the
+ * user's prefix in the strategy-files bucket and removes every object under
+ * <userId>/. Idempotent: a second call finds nothing and succeeds. Best-effort:
+ * a failure is reported but does not block account deletion (the DB rows are
+ * already gone; orphaned objects are inert and can be re-swept later).
+ *
+ * Paths are derived from the trusted user id only — never from client input —
+ * so this can never touch another user's files. */
+export type StorageSweepResult = {
+  removed: number;
+  failed: number;
+  errors: string[];
+};
+
+export async function deleteUserStorage(
+  client: StrategyStorageClient,
+  userId: string,
+): Promise<StorageSweepResult> {
+  const bucket = client.storage.from(STORAGE_BUCKET);
+  const result: StorageSweepResult = { removed: 0, failed: 0, errors: [] };
+  // Paginate the user's prefix. supabase-js list() returns up to 1000 by
+  // default; we loop with offset until an empty page is returned.
+  let offset = 0;
+  const pageSize = 1000;
+  // eslint-disable-next-line no-constant-condition
+  while (true) {
+    const listRes = await bucket.list(userId, { limit: pageSize, offset });
+    const files = (listRes as { data?: { name: string }[]; error?: { message: string } | null }).data ?? [];
+    const err = (listRes as { error?: { message: string } | null }).error;
+    if (err) {
+      result.failed += 1;
+      result.errors.push(`list failed: ${err.message}`);
+      break;
+    }
+    if (files.length === 0) break;
+    // Objects live at <userId>/<auditId>/<file>; list(userId) returns the
+    // auditId-level "folders". Recurse one level to get the file names, then
+    // remove by full path. (Storage list is shallow.)
+    const pathsToRemove: string[] = [];
+    for (const folder of files) {
+      const inner = await bucket.list(`${userId}/${folder.name}`, {
+        limit: pageSize,
+        offset: 0,
+      });
+      const innerErr = (inner as { error?: { message: string } | null }).error;
+      if (innerErr) {
+        result.failed += 1;
+        result.errors.push(`list ${userId}/${folder.name} failed: ${innerErr.message}`);
+        continue;
+      }
+      const innerFiles = (inner as { data?: { name: string }[] }).data ?? [];
+      for (const f of innerFiles) {
+        pathsToRemove.push(`${userId}/${folder.name}/${f.name}`);
+      }
+    }
+    if (pathsToRemove.length > 0) {
+      const rm = await bucket.remove(pathsToRemove);
+      const rmErr = (rm as { error?: { message: string } | null }).error;
+      if (rmErr) {
+        result.failed += pathsToRemove.length;
+        result.errors.push(`remove failed: ${rmErr.message}`);
+      } else {
+        result.removed += pathsToRemove.length;
+      }
+    }
+    if (files.length < pageSize) break;
+    offset += pageSize;
+  }
+  return result;
 }

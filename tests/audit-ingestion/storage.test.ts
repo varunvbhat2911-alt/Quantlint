@@ -5,6 +5,7 @@ import {
   uploadStrategyFile,
   downloadStrategyFile,
   deleteStrategyFile,
+  deleteUserStorage,
   type StrategyStorageClient,
 } from "@/lib/audit-ingestion/storage";
 import { IngestionError } from "@/lib/audit-ingestion/types";
@@ -12,7 +13,9 @@ import { IngestionError } from "@/lib/audit-ingestion/types";
 const enc = (s: string) => new TextEncoder().encode(s);
 
 /* In-memory fake matching the minimal storage surface — unit tests never
- * touch real Supabase Storage. */
+ * touch real Supabase Storage. `list(prefix)` mimics Supabase's shallow
+ * listing: returns the immediate children of `prefix` (or root when omitted),
+ * with `name` set to the next path segment. */
 function fakeStorage(initial: Record<string, Uint8Array> = {}) {
   const objects = new Map(Object.entries(initial));
   const client: StrategyStorageClient = {
@@ -35,6 +38,18 @@ function fakeStorage(initial: Record<string, Uint8Array> = {}) {
           async remove(paths: string[]) {
             for (const p of paths) objects.delete(p);
             return { data: [], error: null };
+          },
+          async list(prefix?: string) {
+            // Shallow list: immediate child segments under `prefix/`.
+            const base = prefix ? prefix + "/" : "";
+            const names = new Set<string>();
+            for (const path of objects.keys()) {
+              if (!path.startsWith(base)) continue;
+              const rest = path.slice(base.length);
+              if (!rest) continue;
+              names.add(rest.split("/")[0]!);
+            }
+            return { data: [...names].map((name) => ({ name })), error: null };
           },
         };
       },
@@ -148,5 +163,46 @@ describe("upload / download / delete round-trip (mocked storage)", () => {
     const { client } = fakeStorage();
     const result = await deleteStrategyFile(client, "nothing/here.py");
     expect(result.ok).toBe(true);
+  });
+});
+
+describe("deleteUserStorage — account-deletion prefix sweep", () => {
+  it("removes every object under <userId>/ and leaves other users intact", async () => {
+    const { client, objects } = fakeStorage({
+      "u-1/a-1/s.py": enc("a"),
+      "u-1/a-2/lib.py": enc("b"),
+      "u-2/a-9/s.py": enc("c"), // another user — must NOT be touched
+    });
+    const result = await deleteUserStorage(client, "u-1");
+    expect(result.removed).toBe(2);
+    expect(result.failed).toBe(0);
+    expect(objects.has("u-1/a-1/s.py")).toBe(false);
+    expect(objects.has("u-1/a-2/lib.py")).toBe(false);
+    expect(objects.has("u-2/a-9/s.py")).toBe(true);
+  });
+
+  it("is idempotent — a second sweep finds nothing", async () => {
+    const { client } = fakeStorage({ "u-1/a-1/s.py": enc("a") });
+    await deleteUserStorage(client, "u-1");
+    const second = await deleteUserStorage(client, "u-1");
+    expect(second.removed).toBe(0);
+    expect(second.failed).toBe(0);
+  });
+
+  it("succeeds with zero removals for a user with no files", async () => {
+    const { client } = fakeStorage();
+    const result = await deleteUserStorage(client, "u-empty");
+    expect(result.removed).toBe(0);
+    expect(result.failed).toBe(0);
+  });
+
+  it("never touches files outside the given prefix", async () => {
+    const { client, objects } = fakeStorage({
+      "u-1/a-1/s.py": enc("a"),
+      "u-1X/a-1/s.py": enc("b"), // prefix-cousin, must not match "u-1"
+    });
+    await deleteUserStorage(client, "u-1");
+    expect(objects.has("u-1/a-1/s.py")).toBe(false);
+    expect(objects.has("u-1X/a-1/s.py")).toBe(true);
   });
 });

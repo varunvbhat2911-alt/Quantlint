@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import type { AuditStatus } from "@/types/database";
 import { computeScore } from "@/lib/audit-engine/types";
+import { maxAuditsPerUser } from "@/lib/server/rate-limit";
 import type { AuditRow, CreateAuditInput } from "./types";
 import {
   dateCutoff,
@@ -26,11 +27,36 @@ function dbError(context: string, message: string): Error {
   return new Error(`[audits] ${context}: ${message}`);
 }
 
+/* Raised when a user has reached their audit quota. Routes map this to a
+ * 409 Conflict so it is distinguishable from rate-limit 429s. */
+export class AuditQuotaExceededError extends Error {
+  readonly limit: number;
+  constructor(limit: number) {
+    super(`Audit quota reached (${limit}). Delete an audit before creating another.`);
+    this.name = "AuditQuotaExceededError";
+    this.limit = limit;
+  }
+}
+
 export async function createAudit(
   input: CreateAuditInput,
   userId: string,
 ): Promise<AuditRow> {
   const supabase = await db();
+
+  /* Per-user audit quota — server-side, RLS-scoped count (no client input
+   * trusted). RLS scopes the select to the caller's own rows. We fetch up to
+   * `limit` ids (bounded — at most 100 rows) and reject when that many already
+   * exist, rather than relying on the content-range count header, which some
+   * supabase-js/PostgREST configurations return as null (silently disabling
+   * the quota). range(0, limit-1) means we materialize at most `limit` rows. */
+  const limit = maxAuditsPerUser();
+  const { data: ownedIds, error: countError } = await supabase
+    .from("audits")
+    .select("id")
+    .range(0, Math.max(0, limit - 1));
+  if (countError) throw dbError("quota check failed", countError.message);
+  if ((ownedIds?.length ?? 0) >= limit) throw new AuditQuotaExceededError(limit);
 
   const { data, error } = await supabase
     .from("audits")
@@ -65,11 +91,51 @@ export async function getAuditById(id: string): Promise<AuditRow | null> {
   return (data as AuditRow | null) ?? null;
 }
 
+/* Legal audit status transitions, mirroring the DB trigger
+ * guard_audit_status_transition() in
+ * supabase/migrations/20260817133000_phase9_state_machine_and_indexes.sql.
+ * The DB trigger is authoritative; this map is defense-in-depth so an illegal
+ * transition is rejected in TS before reaching Postgres. */
+const LEGAL_TRANSITIONS: Record<AuditStatus, readonly AuditStatus[]> = {
+  queued: ["running", "failed"],
+  running: ["completed", "failed"],
+  failed: ["queued"],
+  completed: [], // terminal
+};
+
+export class IllegalStatusTransitionError extends Error {
+  readonly from: AuditStatus;
+  readonly to: AuditStatus;
+  constructor(from: AuditStatus, to: AuditStatus) {
+    super(`Illegal audit status transition: ${from} -> ${to}.`);
+    this.name = "IllegalStatusTransitionError";
+    this.from = from;
+    this.to = to;
+  }
+}
+
+/* Transition an audit's status with a legal-transition guard. Fetches the
+ * current row (RLS-scoped) so the guard can check OLD.status; rejects illegal
+ * transitions before issuing the update. Returns the updated row or null when
+ * the audit is foreign/missing (uniform 404 upstream). */
 export async function updateAuditStatus(
   id: string,
   status: AuditStatus,
 ): Promise<AuditRow | null> {
   const supabase = await db();
+
+  const { data: current, error: fetchErr } = await supabase
+    .from("audits")
+    .select("status")
+    .eq("id", id)
+    .maybeSingle();
+  if (fetchErr) throw dbError("status update fetch failed", fetchErr.message);
+  if (!current) return null; // foreign/missing → upstream 404
+
+  const from = (current as { status: AuditStatus }).status;
+  if (from !== status && !LEGAL_TRANSITIONS[from].includes(status)) {
+    throw new IllegalStatusTransitionError(from, status);
+  }
 
   const { data, error } = await supabase
     .from("audits")
@@ -233,55 +299,32 @@ export async function listAudits(
 
 async function computeListSummary(): Promise<AuditListResult["summary"]> {
   const supabase = await db();
-  const { data: statusRows, error: sError } = await supabase
-    .from("audits")
-    .select("id, status");
-  if (sError) throw dbError("summary failed", sError.message);
-
-  const { data: violationRows, error: vError } = await supabase
-    .from("audit_violations")
-    .select("audit_id, severity");
-  if (vError) throw dbError("summary failed", vError.message);
-
-  const completedSet = new Set(
-    ((statusRows ?? []) as { id: string; status: string }[])
-      .filter((r) => r.status === "completed")
-      .map((r) => r.id),
-  );
-
-  const perAudit = new Map<string, { critical: number; warning: number; info: number }>();
-  for (const v of (violationRows ?? []) as { audit_id: string; severity: string }[]) {
-    const entry = perAudit.get(v.audit_id) ?? { critical: 0, warning: 0, info: 0 };
-    if (v.severity === "critical") entry.critical++;
-    else if (v.severity === "warning") entry.warning++;
-    else entry.info++;
-    perAudit.set(v.audit_id, entry);
-  }
-
-  let totalIssues = 0;
-  let criticalFindings = 0;
-  let scoreSum = 0;
-  let scoredCount = 0;
-  for (const [auditId, c] of perAudit) {
-    totalIssues += c.critical + c.warning + c.info;
-    criticalFindings += c.critical;
-    if (completedSet.has(auditId)) {
-      scoreSum += computeScore({
-        rulesExecuted: 0,
-        rulesPassed: 0,
-        rulesFailed: 0,
-        criticalCount: c.critical,
-        warningCount: c.warning,
-        infoCount: c.info,
-      });
-      scoredCount++;
-    }
-  }
-
+  // DB-side aggregate (audit_list_summary) — returns one row. RLS scopes both
+  // audits and audit_violations to auth.uid() before the function sees them,
+  // so no user_id is passed from the browser. Replaces the Phase 8 pattern of
+  // materializing all audits + all violations into Node.
+  const { data, error } = await supabase.rpc("audit_list_summary");
+  if (error) throw dbError("summary failed", error.message);
+  const row = (data ?? []) as unknown as {
+    total_audits: number | string;
+    total_issues: number | string;
+    critical_findings: number | string;
+    scored_count: number | string;
+    score_sum: number | string;
+  }[];
+  const r = row[0] ?? {
+    total_audits: 0,
+    total_issues: 0,
+    critical_findings: 0,
+    scored_count: 0,
+    score_sum: 0,
+  };
+  const scoredCount = Number(r.scored_count) || 0;
+  const scoreSum = Number(r.score_sum) || 0;
   return {
-    totalAudits: (statusRows ?? []).length,
-    totalIssues,
-    criticalFindings,
+    totalAudits: Number(r.total_audits) || 0,
+    totalIssues: Number(r.total_issues) || 0,
+    criticalFindings: Number(r.critical_findings) || 0,
     averageScore: scoredCount > 0 ? Math.round((scoreSum / scoredCount) * 10) / 10 : null,
   };
 }
@@ -296,16 +339,18 @@ export type AuditStats = {
 
 export async function getAuditStats(): Promise<AuditStats> {
   const supabase = await db();
-  const { data, error } = await supabase.from("audits").select("status");
+  // DB-side GROUP BY (audit_status_counts) — RLS-scoped to the caller.
+  const { data, error } = await supabase.rpc("audit_status_counts");
   if (error) throw dbError("stats failed", error.message);
-
+  const rows = (data ?? []) as unknown as { status: string; count: number | string }[];
   const stats: AuditStats = { total: 0, queued: 0, running: 0, completed: 0, failed: 0 };
-  for (const row of (data ?? []) as { status: string }[]) {
-    stats.total++;
-    if (row.status === "queued") stats.queued++;
-    else if (row.status === "running") stats.running++;
-    else if (row.status === "completed") stats.completed++;
-    else if (row.status === "failed") stats.failed++;
+  for (const row of rows) {
+    const c = Number(row.count) || 0;
+    stats.total += c;
+    if (row.status === "queued") stats.queued += c;
+    else if (row.status === "running") stats.running += c;
+    else if (row.status === "completed") stats.completed += c;
+    else if (row.status === "failed") stats.failed += c;
   }
   return stats;
 }

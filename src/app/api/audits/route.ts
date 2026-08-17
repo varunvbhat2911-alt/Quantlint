@@ -1,5 +1,11 @@
 import { NextRequest } from "next/server";
-import { createAudit, deleteAudit, listAudits, parseCreateAuditRequest } from "@/lib/audits";
+import {
+  createAudit,
+  deleteAudit,
+  listAudits,
+  parseCreateAuditRequest,
+  AuditQuotaExceededError,
+} from "@/lib/audits";
 import { parseListQuery } from "@/lib/audits/list-query";
 import { requireUser } from "@/lib/auth/session";
 import {
@@ -10,6 +16,15 @@ import {
   extractZipStrategy,
   decodePythonSource,
 } from "@/lib/audit-ingestion";
+import {
+  consume,
+  rateKey,
+  clientIp,
+  readLimits,
+  tooManyRequests,
+} from "@/lib/server/rate-limit";
+import { log } from "@/lib/server/logger";
+import { requestIdFrom, withRequestId } from "@/lib/server/request";
 
 /* GET /api/audits — paginated, filtered listing of the AUTHENTICATED user's
  * audits (RLS-scoped through the session client). No source code, violations,
@@ -35,7 +50,11 @@ export async function GET(request: NextRequest) {
       summary: result.summary,
     });
   } catch (err) {
-    console.error("[api/audits] list failed:", err);
+    log.error("api.audits.list_failed", {
+      userId: user.id,
+      errorCode: "AUDIT_LIST_ERROR",
+      ...errField(err),
+    });
     return Response.json(
       { success: false, error: "Failed to list audits." },
       { status: 500 },
@@ -52,66 +71,100 @@ export async function GET(request: NextRequest) {
  *   multipart/form-data     → uploaded .py/.zip file (Phase 6)
  *
  * Upload lifecycle (server-authoritative throughout):
- *   authenticate → validate file (name/ext/MIME/size/content magic) →
- *   create queued audit → upload bytes to private storage under
- *   <user_id>/<audit_id>/<safe_filename> → return audit id. If the storage
- *   upload fails the partially-created audit row is removed so no broken
- *   audit pretends to have a file. */
+ *   authenticate → rate-limit → validate file → create queued audit →
+ *   upload bytes to private storage under <user_id>/<audit_id>/<safe_filename>
+ *   → return audit id. If the storage upload fails the partially-created
+ *   audit row is removed so no broken audit pretends to have a file.
+ *
+ * Phase 9: per-user + per-IP rate limiting and a per-user audit quota. */
 export async function POST(request: NextRequest) {
   const { user, response: unauthorized } = await requireUser();
   if (!user) return unauthorized;
 
+  const requestId = requestIdFrom(request);
+  const limits = readLimits();
+  const ip = clientIp(request);
+
+  // Per-IP and per-user token buckets. Either failing returns 429.
+  const ipRes = consume(rateKey("audits:create:ip", ip), limits.auditsCreateIp);
+  if (!ipRes.ok) return withRequestId(tooManyRequests(ipRes), requestId);
+  const userRes = consume(rateKey("audits:create:user", user.id), limits.auditsCreate);
+  if (!userRes.ok) return withRequestId(tooManyRequests(userRes), requestId);
+
   const contentType = request.headers.get("content-type") ?? "";
   if (contentType.includes("multipart/form-data")) {
-    return createUploadAudit(request, user.id);
+    return createUploadAudit(request, user.id, requestId);
   }
 
   let body: unknown;
   try {
     body = await request.json();
   } catch {
-    return Response.json(
-      { success: false, error: "Request body must be valid JSON." },
-      { status: 400 },
+    return withRequestId(
+      Response.json(
+        { success: false, error: "Request body must be valid JSON." },
+        { status: 400 },
+      ),
+      requestId,
     );
   }
 
   const parsed = parseCreateAuditRequest(body);
   if (!parsed.ok) {
-    return Response.json(
-      { success: false, error: parsed.error, details: parsed.details },
-      { status: 400 },
+    return withRequestId(
+      Response.json(
+        { success: false, error: parsed.error, details: parsed.details },
+        { status: 400 },
+      ),
+      requestId,
     );
   }
   if (parsed.data.inputType === "upload") {
-    return Response.json(
-      {
-        success: false,
-        error:
-          "Uploaded audits must use multipart/form-data with a 'file' field.",
-      },
-      { status: 400 },
+    return withRequestId(
+      Response.json(
+        {
+          success: false,
+          error:
+            "Uploaded audits must use multipart/form-data with a 'file' field.",
+        },
+        { status: 400 },
+      ),
+      requestId,
     );
   }
 
   try {
     const audit = await createAudit(parsed.data, user.id);
-    return Response.json(
-      {
-        success: true,
-        audit: {
-          id: audit.id,
-          status: audit.status,
-          progress: audit.progress,
+    log.info("api.audits.created", { auditId: audit.id, requestId, userId: user.id });
+    return withRequestId(
+      Response.json(
+        {
+          success: true,
+          audit: { id: audit.id, status: audit.status, progress: audit.progress },
         },
-      },
-      { status: 201 },
+        { status: 201 },
+      ),
+      requestId,
     );
   } catch (err) {
-    console.error("[api/audits] create failed:", err);
-    return Response.json(
-      { success: false, error: "Failed to create the audit." },
-      { status: 500 },
+    if (err instanceof AuditQuotaExceededError) {
+      return withRequestId(
+        Response.json({ success: false, error: err.message }, { status: 409 }),
+        requestId,
+      );
+    }
+    log.error("api.audits.create_failed", {
+      requestId,
+      userId: user.id,
+      errorCode: "AUDIT_CREATE_ERROR",
+      ...errField(err),
+    });
+    return withRequestId(
+      Response.json(
+        { success: false, error: "Failed to create the audit." },
+        { status: 500 },
+      ),
+      requestId,
     );
   }
 }
@@ -119,22 +172,28 @@ export async function POST(request: NextRequest) {
 /* Multipart branch: file bytes are validated server-side, stored privately,
  * and only referenced by the audit row (code stays empty until ingestion
  * runs during execution). */
-async function createUploadAudit(request: NextRequest, userId: string) {
+async function createUploadAudit(request: NextRequest, userId: string, requestId: string) {
   let form: FormData;
   try {
     form = await request.formData();
   } catch {
-    return Response.json(
-      { success: false, error: "Request body must be valid multipart form data." },
-      { status: 400 },
+    return withRequestId(
+      Response.json(
+        { success: false, error: "Request body must be valid multipart form data." },
+        { status: 400 },
+      ),
+      requestId,
     );
   }
 
   const file = form.get("file");
   if (!(file instanceof File)) {
-    return Response.json(
-      { success: false, error: "A 'file' field is required." },
-      { status: 400 },
+    return withRequestId(
+      Response.json(
+        { success: false, error: "A 'file' field is required." },
+        { status: 400 },
+      ),
+      requestId,
     );
   }
 
@@ -159,11 +218,17 @@ async function createUploadAudit(request: NextRequest, userId: string) {
       decodePythonSource(bytes, validated.safeName);
     }
   } catch (err) {
+    // IngestionError carries a safe userMessage; use it, never the internal
+    // diagnostic in `message` (Phase 9 leak fix).
     const message =
       err instanceof Error && err.name === "IngestionError"
-        ? err.message
+        ? (err as { userMessage?: string }).userMessage ??
+          "The uploaded file could not be validated."
         : "The uploaded file could not be validated.";
-    return Response.json({ success: false, error: message }, { status: 400 });
+    return withRequestId(
+      Response.json({ success: false, error: message }, { status: 400 }),
+      requestId,
+    );
   }
 
   /* Reuse the exact JSON validation for configuration fields. */
@@ -177,9 +242,12 @@ async function createUploadAudit(request: NextRequest, userId: string) {
     code: "",
   });
   if (!parsed.ok) {
-    return Response.json(
-      { success: false, error: parsed.error, details: parsed.details },
-      { status: 400 },
+    return withRequestId(
+      Response.json(
+        { success: false, error: parsed.error, details: parsed.details },
+        { status: 400 },
+      ),
+      requestId,
     );
   }
 
@@ -187,10 +255,24 @@ async function createUploadAudit(request: NextRequest, userId: string) {
   try {
     audit = await createAudit(parsed.data, userId);
   } catch (err) {
-    console.error("[api/audits] create (upload) failed:", err);
-    return Response.json(
-      { success: false, error: "Failed to create the audit." },
-      { status: 500 },
+    if (err instanceof AuditQuotaExceededError) {
+      return withRequestId(
+        Response.json({ success: false, error: err.message }, { status: 409 }),
+        requestId,
+      );
+    }
+    log.error("api.audits.create_upload_failed", {
+      requestId,
+      userId,
+      errorCode: "AUDIT_CREATE_ERROR",
+      ...errField(err),
+    });
+    return withRequestId(
+      Response.json(
+        { success: false, error: "Failed to create the audit." },
+        { status: 500 },
+      ),
+      requestId,
     );
   }
 
@@ -204,31 +286,45 @@ async function createUploadAudit(request: NextRequest, userId: string) {
       bytes: validated.bytes,
     });
   } catch (err) {
-    console.error(
-      `[api/audits] storage upload failed for ${audit.id}:`,
-      err instanceof Error ? err.message : err,
-    );
+    log.error("api.audits.storage_upload_failed", {
+      requestId,
+      auditId: audit.id,
+      errorCode: "STORAGE_UPLOAD_ERROR",
+      ...errField(err),
+    });
     try {
       await deleteAudit(audit.id);
     } catch (cleanupErr) {
-      console.error(
-        `[api/audits] cleanup after failed upload left audit ${audit.id}:`,
-        cleanupErr instanceof Error ? cleanupErr.message : cleanupErr,
-      );
+      log.error("api.audits.cleanup_after_failed_upload", {
+        requestId,
+        auditId: audit.id,
+        ...errField(cleanupErr),
+      });
     }
-    return Response.json(
-      { success: false, error: "Failed to store the strategy file." },
-      { status: 502 },
+    return withRequestId(
+      Response.json(
+        { success: false, error: "Failed to store the strategy file." },
+        { status: 502 },
+      ),
+      requestId,
     );
   }
 
-  return Response.json(
-    {
-      success: true,
-      audit: { id: audit.id, status: audit.status, progress: audit.progress },
-    },
-    { status: 201 },
+  log.info("api.audits.created_upload", { requestId, auditId: audit.id, userId });
+  return withRequestId(
+    Response.json(
+      {
+        success: true,
+        audit: { id: audit.id, status: audit.status, progress: audit.progress },
+      },
+      { status: 201 },
+    ),
+    requestId,
   );
+}
+
+function errField(err: unknown): { error: string } {
+  return { error: err instanceof Error ? err.message : "unknown error" };
 }
 
 /* ruleCategories arrives as a JSON array string (the frontend serializes

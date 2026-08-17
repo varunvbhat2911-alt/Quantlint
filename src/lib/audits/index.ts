@@ -7,6 +7,8 @@ export {
   listAudits,
   getAuditStats,
   deleteAudit,
+  AuditQuotaExceededError,
+  IllegalStatusTransitionError,
   type AuditSummary,
   type AuditListItem,
   type AuditListResult,

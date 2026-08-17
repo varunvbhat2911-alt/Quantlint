@@ -65,12 +65,19 @@ export interface AuditRepository {
  * Default: the service-role admin client (used by the internal audit
  * executor after the calling route has verified ownership). User-facing
  * read paths pass the request-scoped session client so RLS enforces
- * ownership at the database layer. */
-export function createSupabaseAuditRepository(client?: AnyDbClient): AuditRepository {
-  if (client) {
+ * ownership at the database layer.
+ *
+ * An explicit {supabaseUrl, serviceRoleKey} config is accepted so the Deno
+ * Edge Function worker can build its own admin client without relying on
+ * Node's process.env. */
+export function createSupabaseAuditRepository(
+  client?: AnyDbClient | { supabaseUrl?: string; serviceRoleKey?: string },
+): AuditRepository {
+  if (client && !isExplicitConfig(client)) {
     return buildRepository(client);
   }
-  if (!isAdminClientConfigured()) {
+  const cfg = client as { supabaseUrl?: string; serviceRoleKey?: string } | undefined;
+  if (!isAdminClientConfigured(cfg)) {
     // Fail fast with a clear message rather than issuing RLS-denied queries.
     const notConfigured = {
       getAudit: async (): Promise<AuditRow | null> => null,
@@ -101,7 +108,32 @@ export function createSupabaseAuditRepository(client?: AnyDbClient): AuditReposi
     return notConfigured;
   }
 
-  return buildRepository(createAdminClient());
+  return buildRepository(createAdminClient(cfg) as AnyDbClient);
+}
+
+/* Discriminate a real DB client from an explicit-config object.
+ *
+ * A real Supabase client (session OR admin) exposes query builder methods
+ * `from`, `auth`, and `rpc` — an explicit {supabaseUrl, serviceRoleKey} config
+ * does NOT. (The previous check used `"supabaseUrl" in o`, which was wrong: the
+ * @supabase/ssr server client carries a top-level `supabaseUrl` property, so the
+ * results route's session client was misclassified as an explicit config and
+ * silently rebuilt as a service-role admin client — bypassing RLS and leaking
+ * other users' results. Detect configs by the ABSENCE of client methods, not
+ * the presence of url/key fields.) */
+function isExplicitConfig(
+  v: unknown,
+): v is { supabaseUrl?: string; serviceRoleKey?: string } {
+  if (typeof v !== "object" || v === null) return false;
+  const o = v as Record<string, unknown>;
+  // A real client has query-builder methods; a plain config object does not.
+  const hasClientMethods =
+    typeof o.from === "function" &&
+    typeof o.auth === "object" &&
+    typeof o.rpc === "function";
+  if (hasClientMethods) return false;
+  // Plain config: only accept it if it actually carries url/key fields.
+  return "supabaseUrl" in o || "serviceRoleKey" in o;
 }
 
 function buildRepository(db: AnyDbClient): AuditRepository {

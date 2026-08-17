@@ -1119,6 +1119,29 @@ function RealAuditContent({
     );
   }
 
+  if (job.status === "stale") {
+    // The audit is taking longer than the polling cap. The server's scheduled
+    // stale recovery will eventually transition it; we stop spinning and offer
+    // a way back. We do NOT mark it completed or failed client-side.
+    return (
+      <div className="space-y-10">
+        <PageHeader
+          title="Audit Is Taking Longer Than Expected"
+          subtitle="The server is still processing it. You can wait or return to the dashboard."
+          breadcrumbs={[
+            { label: "Dashboard", href: "/dashboard" },
+            { label: "New Audit", href: "/audit/new" },
+            { label: "Running" },
+          ]}
+        />
+        <ErrorState
+          error="This audit has not reached a terminal state within the expected window. It may still complete — check History shortly, or start a new audit."
+          onRetry={() => router.push("/history")}
+        />
+      </div>
+    );
+  }
+
   if (job.status === "completed" && completion) {
     return (
       <div className="space-y-10">
