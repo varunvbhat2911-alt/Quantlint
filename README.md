@@ -6,6 +6,8 @@ QuantLint is a developer-first quantitative trading strategy validation platform
 
 Built for quantitative developers, algorithmic traders, researchers, data scientists, and financial engineering teams.
 
+https://quantlint.vercel.app/
+
 ---
 
 ## Overview
